@@ -1,0 +1,17 @@
+{
+  "name": "swiss-deploy-knife",
+  "version": "0.0.0",
+  "description": "A tool to easy out deployment and log analysis",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": "",
+  "keywords": [
+    "log",
+    "deploy",
+    "logstash"
+  ],
+  "author": "Vittorio Zaccaria",
+  "license": "BSD"
+}
