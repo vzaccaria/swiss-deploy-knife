@@ -1,5 +1,10 @@
+cwd = process.cwd()
+debug = true
 
-{ namespace, task, build-tasks, run } = require('./sk-lib')
+if debug
+  { namespace, task, build-tasks, run } = require("#cwd/index.js")
+else
+  { namespace, task, build-tasks, run } = require('swiss-deploy-knife')
 
 nodes = 
     web:

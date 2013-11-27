@@ -48,7 +48,9 @@ argv     = optimist.usage(usage-string,
               default:
                 alias: 'd', description: 'Use default node'
               command:
-                alias: 'c', description: 'use with `cmd` task to specify a remote command'
+                alias: 'c', description: 'Use with `cmd` task to specify a remote command'
+              file:
+                alias: 'f', description: 'Use this config file'
               node:
                 alias: 'n', description: 'Specify target node or a comma separated list (e.g., -n s1,s2,s3)'
                          ).boolean(\l)
@@ -58,8 +60,7 @@ argv     = optimist.usage(usage-string,
 if(argv.help)
   optimist.showHelp()
 
-{ nodes, namespace } = require './config'
-
+{ nodes, namespace } = require("#cwd/#{argv.file}")
 tab = 25
 
 nsf = (s) ->
@@ -102,7 +103,7 @@ invoke-actions = (p, tt) ->
   if argv._.length == 0
     return p.then-reject("Pleas specify at least one task")
 
-  { create-tunnel, close-tunnel } = require('./sk-lib')
+  { create-tunnel, close-tunnel } = require('../lib/sk-lib')
 
   target = nodes[tt]
 
