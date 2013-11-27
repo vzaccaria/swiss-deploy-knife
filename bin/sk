@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 (function(){
-  var _, moment, fs, color, os, shelljs, table, name, description, author, year, src, otm, cwd, setupTemporaryDirectory, usageString, optimist, argv, ref$, nodes, namespace, tab, nsf, tf, ns, nns, vns, k, v, data, __q, invokeActions, ok, ko, original, current, i$, len$, n;
+  var _, moment, fs, color, os, shelljs, table, name, description, author, year, src, otm, cwd, setupTemporaryDirectory, usageString, optimist, argv, ff, ref$, nodes, namespace, tab, nsf, tf, ns, nns, vns, k, v, data, __q, invokeActions, ok, ko, original, current, i$, len$, n;
   _ = require('underscore');
   _.str = require('underscore.string');
   moment = require('moment');
@@ -56,7 +56,11 @@
   if (argv.help) {
     optimist.showHelp();
   }
-  ref$ = require(cwd + "/" + argv.file), nodes = ref$.nodes, namespace = ref$.namespace;
+  if (argv.file == null) {
+    argv.file = "./config";
+  }
+  ff = require("path").resolve(cwd, argv.file);
+  ref$ = require(ff), nodes = ref$.nodes, namespace = ref$.namespace;
   tab = 25;
   nsf = function(s){
     return _.pad('', 2) + _.rpad(color(s, 'bold'), tab - 2);

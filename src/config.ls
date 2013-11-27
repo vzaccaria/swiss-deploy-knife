@@ -1,5 +1,5 @@
 cwd = process.cwd()
-debug = true
+debug = false
 
 if debug
   { namespace, task, build-tasks, run } = require("#cwd/index.js")

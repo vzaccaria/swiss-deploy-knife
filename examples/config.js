@@ -1,7 +1,7 @@
 (function(){
   var cwd, debug, ref$, namespace, task, buildTasks, run, nodes, ns;
   cwd = process.cwd();
-  debug = true;
+  debug = false;
   if (debug) {
     ref$ = require(cwd + "/index.js"), namespace = ref$.namespace, task = ref$.task, buildTasks = ref$.buildTasks, run = ref$.run;
   } else {

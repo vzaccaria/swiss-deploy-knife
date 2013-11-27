@@ -60,7 +60,15 @@ argv     = optimist.usage(usage-string,
 if(argv.help)
   optimist.showHelp()
 
-{ nodes, namespace } = require("#cwd/#{argv.file}")
+if not argv.file?
+  argv.file = "./config"
+
+# console.log argv.file
+
+ff = require("path").resolve(cwd, argv.file)
+# console.log ff
+
+{ nodes, namespace } = require(ff)
 tab = 25
 
 nsf = (s) ->

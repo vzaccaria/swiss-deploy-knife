@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "A tool to easy out deployment and log analysis",
   "main": "index.js",
+  "bin": {
+    "sk": "./bin/sk"
+  },
   "scripts": {
     "test": "npm test"
   },
@@ -13,5 +16,15 @@
     "logstash"
   ],
   "author": "Vittorio Zaccaria",
-  "license": "BSD"
+  "license": "BSD",
+  "devDependencies": {
+    "ansi-color": "~0.2.1",
+    "underscore": "~1.5.2",
+    "shelljs": "~0.2.6",
+    "underscore.string": "~2.3.3",
+    "moment": "~2.4.0",
+    "ansi-color-table": "0.0.3",
+    "optimist": "~0.6.0",
+    "ssh2": "~0.2.14"
+  }
 }
