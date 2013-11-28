@@ -1,10 +1,10 @@
 cwd = process.cwd()
-debug = false
+debug = false 
 
 if debug
-  { namespace, task, build-tasks, run } = require("#cwd/index.js")
+  { namespace, task, build-tasks, run, get, print-as-table, run-ls-syslog } = require("#{__dirname}/../index.js")
 else
-  { namespace, task, build-tasks, run } = require('swiss-deploy-knife')
+  { namespace, task, build-tasks, run, get, print-as-table, run-ls-syslog } = require('swiss-deploy-knife')
 
 nodes = 
     web:
@@ -41,8 +41,30 @@ ns = build-tasks [
             task 'free', ->
               run @local, 'free'
 
-            task 'cmd', ->
+            task 'cmd', "Executes a command specified with -c `command`", ->
               run @local, @args.command
+
+            task 'sysg', "Copies syslog locally", ->
+              get @local, '/var/log/syslog', './syslog'
+
+            task 'sysg-ls', "Copies syslog locally and launches log stash", ->
+              get @local, '/var/log/syslog', '/tmp/syslog'
+              .then -> run-ls-syslog '/tmp/syslog'
+
+            task 'npm', "Executes an npm command", ->
+              run @local, "npm #{@args.command}"
+
+            task 'snpm', "Executes an npm command with sudo", ->
+              run @local, "sudo npm #{@args.command}"
+
+            task 'dfj',  'inspects disk quotas', -> 
+              run @local, 'df-json', { +silent }
+              .then -> JSON.parse it
+              .then -> 
+                opts = 
+                  sparkly: ['percent']
+                  remove:  ['filesystem']
+                print-as-table(it, opts)
 
             ...
 

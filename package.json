@@ -7,7 +7,7 @@
     "sk": "./bin/sk"
   },
   "scripts": {
-    "test": "npm test"
+    "postinstall": "sh ./scripts/postinstall.sh"
   },
   "repository": "",
   "keywords": [
@@ -17,7 +17,7 @@
   ],
   "author": "Vittorio Zaccaria",
   "license": "BSD",
-  "devDependencies": {
+  "dependencies": {
     "ansi-color": "~0.2.1",
     "underscore": "~1.5.2",
     "shelljs": "~0.2.6",
@@ -25,6 +25,10 @@
     "moment": "~2.4.0",
     "ansi-color-table": "0.0.3",
     "optimist": "~0.6.0",
-    "ssh2": "~0.2.14"
+    "ssh2": "~0.2.14",
+    "easy-table": "~0.2.0",
+    "clark": "0.0.6",
+    "utf8": "~2.0.0",
+    "utf-8": "~0.1.0"
   }
 }

@@ -61,14 +61,19 @@ if(argv.help)
   optimist.showHelp()
 
 if not argv.file?
-  argv.file = "./config"
+  argv.file = "./config.js"
 
 # console.log argv.file
 
 ff = require("path").resolve(cwd, argv.file)
-# console.log ff
+console.log ff
 
-{ nodes, namespace } = require(ff)
+try 
+  { nodes, namespace } = require(ff)
+catch e
+  console.log "Sorry, no configuration file found: #e"
+  process.exit(0)
+  
 tab = 25
 
 nsf = (s) ->
@@ -159,14 +164,14 @@ ko = ->
 original = __q.defer()
 current = original.promise
 
-if argv.default 
+if argv.default or not argv.node
   if nodes.default?
     current = invoke-actions(current, nodes.default)
   else 
     current = current.thenReject("Please specify a default node")
-
-for n in _.words(argv.node,',')
-  current := invoke-actions(current, n)
+else
+  for n in _.words(argv.node,',')
+    current := invoke-actions(current, n)
 
 current.then ok, ko
 original.resolve()

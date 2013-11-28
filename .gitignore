@@ -4,3 +4,7 @@ lib/logstash.jar
 scripts/launch-ssh.ls
 
 scripts/parse-log.ls
+
+scripts/logstash.jar
+
+syslog

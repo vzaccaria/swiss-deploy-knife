@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 (function(){
-  var _, moment, fs, color, os, shelljs, table, name, description, author, year, src, otm, cwd, setupTemporaryDirectory, usageString, optimist, argv, ff, ref$, nodes, namespace, tab, nsf, tf, ns, nns, vns, k, v, data, __q, invokeActions, ok, ko, original, current, i$, len$, n;
+  var _, moment, fs, color, os, shelljs, table, name, description, author, year, src, otm, cwd, setupTemporaryDirectory, usageString, optimist, argv, ff, ref$, nodes, namespace, e, tab, nsf, tf, ns, nns, vns, k, v, data, __q, invokeActions, ok, ko, original, current, i$, len$, n;
   _ = require('underscore');
   _.str = require('underscore.string');
   moment = require('moment');
@@ -57,10 +57,17 @@
     optimist.showHelp();
   }
   if (argv.file == null) {
-    argv.file = "./config";
+    argv.file = "./config.js";
   }
   ff = require("path").resolve(cwd, argv.file);
-  ref$ = require(ff), nodes = ref$.nodes, namespace = ref$.namespace;
+  console.log(ff);
+  try {
+    ref$ = require(ff), nodes = ref$.nodes, namespace = ref$.namespace;
+  } catch (e$) {
+    e = e$;
+    console.log("Sorry, no configuration file found: " + e);
+    process.exit(0);
+  }
   tab = 25;
   nsf = function(s){
     return _.pad('', 2) + _.rpad(color(s, 'bold'), tab - 2);
@@ -163,16 +170,17 @@
   };
   original = __q.defer();
   current = original.promise;
-  if (argv['default']) {
+  if (argv['default'] || !argv.node) {
     if (nodes['default'] != null) {
       current = invokeActions(current, nodes['default']);
     } else {
       current = current.thenReject("Please specify a default node");
     }
-  }
-  for (i$ = 0, len$ = (ref$ = _.words(argv.node, ',')).length; i$ < len$; ++i$) {
-    n = ref$[i$];
-    current = invokeActions(current, n);
+  } else {
+    for (i$ = 0, len$ = (ref$ = _.words(argv.node, ',')).length; i$ < len$; ++i$) {
+      n = ref$[i$];
+      current = invokeActions(current, n);
+    }
   }
   current.then(ok, ko);
   original.resolve();
