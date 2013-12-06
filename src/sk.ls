@@ -1,14 +1,36 @@
 #!/usr/bin/env lsc
 # options are accessed as argv.option
 
-_       = require('underscore')
-_.str   = require('underscore.string');
-moment  = require 'moment'
-fs      = require 'fs'
-color   = require('ansi-color').set
-os      = require('os')
-shelljs = require('shelljs')
-table   = require('ansi-color-table');
+_                                = require('underscore')
+_.str                            = require('underscore.string');
+moment                           = require 'moment'
+fs                               = require 'fs'
+color                            = require('ansi-color').set
+os                               = require('os')
+shelljs                          = require('shelljs')
+table                            = require('ansi-color-table');
+__q                              = require('q')
+winston                          = require('winston')
+{ invoke-actions }               = require('../lib/actions')
+{ mount-tunnel, unmount-tunnel } = require('../lib/tunnel')
+{ print-env }                    = require('../lib/print')
+{ get-interested-nodes }         = require('../lib/sk-lib')
+
+disp-ok = -> winston.info "Ok"
+disp-ko = -> 
+  winston.error it.toString()
+
+disp    = winston.info
+pdisp   = console.log
+pdeb    = winston.warn
+
+psetup = (file) ->
+    if file?
+        winston.add(winston.transports.File, { filename: file });
+        winston.remove(winston.transports.Console);
+    else
+        winston.remove(winston.transports.Console);
+        winston.add(winston.transports.Console, { +colorize })
 
 
 _.mixin(_.str.exports());
@@ -23,13 +45,6 @@ src = __dirname
 otm = if (os.tmpdir?) then os.tmpdir() else "/var/tmp"
 cwd = process.cwd()
 
-setup-temporary-directory = ->
-    name = "tmp_#{moment().format('HHmmss')}_tmp"
-    dire = "#{otm}/#{name}" 
-    shelljs.mkdir '-p', dire
-    return dire
-
-
 usage-string = """
 
 #{color(name, \bold)}. #{description}
@@ -43,6 +58,8 @@ require! 'optimist'
 argv     = optimist.usage(usage-string,
               help:
                 alias: 'h', description: 'This help'
+              logfile: 
+                alias: 'g', description: 'Specify a log file'
               list:
                 alias: 'l', description: 'List available tasks'
               default:
@@ -51,10 +68,13 @@ argv     = optimist.usage(usage-string,
                 alias: 'c', description: 'Use with `cmd` task to specify a remote command'
               file:
                 alias: 'f', description: 'Use this config file'
+              latency:
+                alias: 'y', description: 'Wait for latency (ms)'
               node:
                 alias: 'n', description: 'Specify target node or a comma separated list (e.g., -n s1,s2,s3)'
                          ).boolean(\l)
                           .boolean(\d)
+                          .boolean(\s)
                           .argv
 
 if(argv.help)
@@ -63,118 +83,49 @@ if(argv.help)
 if not argv.file?
   argv.file = "./config.js"
 
-# console.log argv.file
+psetup(argv.logile)
 
 ff = require("path").resolve(cwd, argv.file)
-console.log ff
+disp "Using configuration file: #ff"
 
 try 
   { nodes, namespace } = require(ff)
 catch e
-  console.log "Sorry, no configuration file found: #e"
+  disp-ko "Sorry, no configuration file found: #e"
   process.exit(0)
   
-tab = 25
-
-nsf = (s) ->
-  _.pad('', 2) + _.rpad(color(s, \bold), (tab-2))
-
-tf = (s) ->
-  _.pad(':', 10) + _.rpad(s, (tab-20+2))
-
-# console.log JSON.stringify(nodes, null, 4)
-# console.log argv
 
 if argv.list? and argv.list or argv.help? and argv.help
-  console.log "Namespace and tasklist:"
-  console.log ""
-  ns = namespace
-  for nns, vns of ns
-      console.log nsf(nns), " — #{vns.description}"
-      for k,v of vns.tasks 
-         console.log tf(k), " — #{v.description}"
-      console.log ""
-
-  console.log "Nodes:"    
-  console.log ""
-  for name, data of nodes
-      if name isnt \default
-        console.log nsf(name), " — ", data.description, "[", color(data.access, \green), "]" 
-  return 0
+  print-env(nodes, namespace)
 
 if not nodes.default? or not nodes[nodes.default]? 
-  console.log "You should specify a default node"
-  return
+  disp-ko "You should specify a default node"
+  process.exit(0)
 
-__q = require('q')
-
-invoke-actions = (p, tt) ->
-
-  if not nodes[tt]?
-    return p.then-reject("Skipping #tt, invalid target ")
-
-  if argv._.length == 0
-    return p.then-reject("Pleas specify at least one task")
-
-  { create-tunnel, close-tunnel } = require('../lib/sk-lib')
-
-  target = nodes[tt]
-
-  for t in argv._ 
-
-    if t in _.pluck(namespace['general'].tasks, 'name')
-
-      if not target.path.from?
-        console.log "Launching `#t` on `#{target.path.hostname}`"
-        task-function = namespace['general'].tasks[t].fun 
-        context = { local: target.path, args:argv }
-        p := p.then( -> task-function.apply(context))
-
-      else
-        address = target.path 
-        through = nodes[target.path.from].path
-        console.log "Launching `#t` on `#{address.hostname}:#{address.port}` through `#{through.hostname}`"
-        task-function = namespace['general'].tasks[t].fun 
-
-        new-context = 
-          local: 
-            username:    address.username
-            hostname:    "localhost"
-            port:        address.use
-            credentials: address.credentials
-          args:argv
-
-        p := p.then( -> create-tunnel(address, through)) 
-        p := p.then( -> task-function.apply(new-context))
-        p := p.then( -> close-tunnel())
-
-    else 
-      return p.thenReject("Sorry, no valid task named #t")
-
-  return p
 
 ok = ->
-  console.log color("Ok", \green)
+  disp-ok it
   process.exit()
 
 ko = ->
-  console.log color("Error:", "red"), it
+  disp-ko it
   process.exit()
+
+copy = (x) ->
+  cmm = "echo '#x' | pbcopy"
+  shelljs.exec(cmm)
+
 
 original = __q.defer()
 current = original.promise
 
-if argv.default or not argv.node
-  if nodes.default?
-    current = invoke-actions(current, nodes.default)
-  else 
-    current = current.thenReject("Please specify a default node")
-else
-  for n in _.words(argv.node,',')
-    current := invoke-actions(current, n)
+for n in get-interested-nodes(argv, nodes)
+  current = invoke-actions(current, n, argv, nodes, namespace)
 
 current.then ok, ko
 original.resolve()
+
+
 
 
 

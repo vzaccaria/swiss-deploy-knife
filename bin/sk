@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 (function(){
-  var _, moment, fs, color, os, shelljs, table, name, description, author, year, src, otm, cwd, setupTemporaryDirectory, usageString, optimist, argv, ff, ref$, nodes, namespace, e, tab, nsf, tf, ns, nns, vns, k, v, data, __q, invokeActions, ok, ko, original, current, i$, len$, n;
+  var _, moment, fs, color, os, shelljs, table, __q, winston, invokeActions, ref$, mountTunnel, unmountTunnel, printEnv, getInterestedNodes, dispOk, dispKo, disp, pdisp, pdeb, psetup, name, description, author, year, src, otm, cwd, usageString, optimist, argv, ff, nodes, namespace, e, ok, ko, copy, original, current, i$, len$, n;
   _ = require('underscore');
   _.str = require('underscore.string');
   moment = require('moment');
@@ -9,6 +9,34 @@
   os = require('os');
   shelljs = require('shelljs');
   table = require('ansi-color-table');
+  __q = require('q');
+  winston = require('winston');
+  invokeActions = require('../lib/actions').invokeActions;
+  ref$ = require('../lib/tunnel'), mountTunnel = ref$.mountTunnel, unmountTunnel = ref$.unmountTunnel;
+  printEnv = require('../lib/print').printEnv;
+  getInterestedNodes = require('../lib/sk-lib').getInterestedNodes;
+  dispOk = function(){
+    return winston.info("Ok");
+  };
+  dispKo = function(it){
+    return winston.error(it.toString());
+  };
+  disp = winston.info;
+  pdisp = console.log;
+  pdeb = winston.warn;
+  psetup = function(file){
+    if (file != null) {
+      winston.add(winston.transports.File, {
+        filename: file
+      });
+      return winston.remove(winston.transports.Console);
+    } else {
+      winston.remove(winston.transports.Console);
+      return winston.add(winston.transports.Console, {
+        colorize: true
+      });
+    }
+  };
   _.mixin(_.str.exports());
   _.str.include('Underscore.string', 'string');
   name = "Swiss Knife 2.0 - Deploy Tool";
@@ -18,19 +46,16 @@
   src = __dirname;
   otm = os.tmpdir != null ? os.tmpdir() : "/var/tmp";
   cwd = process.cwd();
-  setupTemporaryDirectory = function(){
-    var name, dire;
-    name = "tmp_" + moment().format('HHmmss') + "_tmp";
-    dire = otm + "/" + name;
-    shelljs.mkdir('-p', dire);
-    return dire;
-  };
   usageString = "\n" + color(name, 'bold') + ". " + description + "\n(c) " + author + ", " + year + "\n\nUsage: " + name + " [--option=V | -o V] task(s) ";
   optimist = require('optimist');
   argv = optimist.usage(usageString, {
     help: {
       alias: 'h',
       description: 'This help'
+    },
+    logfile: {
+      alias: 'g',
+      description: 'Specify a log file'
     },
     list: {
       alias: 'l',
@@ -48,145 +73,57 @@
       alias: 'f',
       description: 'Use this config file'
     },
+    latency: {
+      alias: 'y',
+      description: 'Wait for latency (ms)'
+    },
     node: {
       alias: 'n',
       description: 'Specify target node or a comma separated list (e.g., -n s1,s2,s3)'
     }
-  }).boolean('l').boolean('d').argv;
+  }).boolean('l').boolean('d').boolean('s').argv;
   if (argv.help) {
     optimist.showHelp();
   }
   if (argv.file == null) {
     argv.file = "./config.js";
   }
+  psetup(argv.logile);
   ff = require("path").resolve(cwd, argv.file);
-  console.log(ff);
+  disp("Using configuration file: " + ff);
   try {
     ref$ = require(ff), nodes = ref$.nodes, namespace = ref$.namespace;
   } catch (e$) {
     e = e$;
-    console.log("Sorry, no configuration file found: " + e);
+    dispKo("Sorry, no configuration file found: " + e);
     process.exit(0);
   }
-  tab = 25;
-  nsf = function(s){
-    return _.pad('', 2) + _.rpad(color(s, 'bold'), tab - 2);
-  };
-  tf = function(s){
-    return _.pad(':', 10) + _.rpad(s, tab - 20 + 2);
-  };
   if (argv.list != null && argv.list || argv.help != null && argv.help) {
-    console.log("Namespace and tasklist:");
-    console.log("");
-    ns = namespace;
-    for (nns in ns) {
-      vns = ns[nns];
-      console.log(nsf(nns), " — " + vns.description);
-      for (k in ref$ = vns.tasks) {
-        v = ref$[k];
-        console.log(tf(k), " — " + v.description);
-      }
-      console.log("");
-    }
-    console.log("Nodes:");
-    console.log("");
-    for (name in nodes) {
-      data = nodes[name];
-      if (name !== 'default') {
-        console.log(nsf(name), " — ", data.description, "[", color(data.access, 'green'), "]");
-      }
-    }
-    return 0;
+    printEnv(nodes, namespace);
   }
   if (nodes['default'] == null || nodes[nodes['default']] == null) {
-    console.log("You should specify a default node");
-    return;
+    dispKo("You should specify a default node");
+    process.exit(0);
   }
-  __q = require('q');
-  invokeActions = function(p, tt){
-    var ref$, createTunnel, closeTunnel, target, i$, len$, t, taskFunction, context, address, through, newContext;
-    if (nodes[tt] == null) {
-      return p.thenReject("Skipping " + tt + ", invalid target ");
-    }
-    if (argv._.length === 0) {
-      return p.thenReject("Pleas specify at least one task");
-    }
-    ref$ = require('../lib/sk-lib'), createTunnel = ref$.createTunnel, closeTunnel = ref$.closeTunnel;
-    target = nodes[tt];
-    for (i$ = 0, len$ = (ref$ = argv._).length; i$ < len$; ++i$) {
-      t = ref$[i$];
-      if (in$(t, _.pluck(namespace['general'].tasks, 'name'))) {
-        if (target.path.from == null) {
-          console.log("Launching `" + t + "` on `" + target.path.hostname + "`");
-          taskFunction = namespace['general'].tasks[t].fun;
-          context = {
-            local: target.path,
-            args: argv
-          };
-          p = p.then(fn$);
-        } else {
-          address = target.path;
-          through = nodes[target.path.from].path;
-          console.log("Launching `" + t + "` on `" + address.hostname + ":" + address.port + "` through `" + through.hostname + "`");
-          taskFunction = namespace['general'].tasks[t].fun;
-          newContext = {
-            local: {
-              username: address.username,
-              hostname: "localhost",
-              port: address.use,
-              credentials: address.credentials
-            },
-            args: argv
-          };
-          p = p.then(fn1$);
-          p = p.then(fn2$);
-          p = p.then(fn3$);
-        }
-      } else {
-        return p.thenReject("Sorry, no valid task named " + t);
-      }
-    }
-    return p;
-    function fn$(){
-      return taskFunction.apply(context);
-    }
-    function fn1$(){
-      return createTunnel(address, through);
-    }
-    function fn2$(){
-      return taskFunction.apply(newContext);
-    }
-    function fn3$(){
-      return closeTunnel();
-    }
-  };
-  ok = function(){
-    console.log(color("Ok", 'green'));
+  ok = function(it){
+    dispOk(it);
     return process.exit();
   };
   ko = function(it){
-    console.log(color("Error:", "red"), it);
+    dispKo(it);
     return process.exit();
+  };
+  copy = function(x){
+    var cmm;
+    cmm = "echo '" + x + "' | pbcopy";
+    return shelljs.exec(cmm);
   };
   original = __q.defer();
   current = original.promise;
-  if (argv['default'] || !argv.node) {
-    if (nodes['default'] != null) {
-      current = invokeActions(current, nodes['default']);
-    } else {
-      current = current.thenReject("Please specify a default node");
-    }
-  } else {
-    for (i$ = 0, len$ = (ref$ = _.words(argv.node, ',')).length; i$ < len$; ++i$) {
-      n = ref$[i$];
-      current = invokeActions(current, n);
-    }
+  for (i$ = 0, len$ = (ref$ = getInterestedNodes(argv, nodes)).length; i$ < len$; ++i$) {
+    n = ref$[i$];
+    current = invokeActions(current, n, argv, nodes, namespace);
   }
   current.then(ok, ko);
   original.resolve();
-  function in$(x, arr){
-    var i = -1, l = arr.length >>> 0;
-    while (++i < l) if (x === arr[i] && i in arr) return true;
-    return false;
-  }
 }).call(this);
