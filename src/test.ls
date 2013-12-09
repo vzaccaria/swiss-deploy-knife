@@ -2,6 +2,8 @@ require! 'should'
 require! 'sinon'
 require! 'assert'
 
+_ = require('underscore')
+
 moment = require 'moment'
 __q = require('q')
 
@@ -323,6 +325,120 @@ describe 'actions', (empty)->
 
             p `notifies-on-success` done
 
+
+
+describe 'tasks and namespace', (empty)->
+    var tsk
+    var p
+    tsk := require('./task')
+    var ns 
+    var spy
+
+    ns = tsk.build-tasks [
+        tsk.namespace 'general', 'general commands applicable to almost all access modes',
+            # Use bound functions ~> inside tasks..
+            tsk.task 'top', 'inspects processes', -> 
+              tsk.run @remote, 'top -b -n 1 | head -n 12'
+        tsk.namespace 'myns', 
+            tsk.task 'xyz', ->
+                console.log "no fun.."
+        ]
+
+    describe 'tasks and namespaces', (empty)->
+
+            it 'should create namespaces structure', ->
+                should.exist(ns)
+                should.exist(ns['general'])
+                should.exist(ns['myns'])
+
+            it 'should create tasks', ->
+                should.exist(ns['general'].tasks['top'])
+                should.exist(ns['myns'].tasks['xyz'])
+
+            it 'should create metadata', ->
+                ns['general'].tasks['top'].description.should.be.equal('inspects processes')
+                ns['general'].tasks['top'].name.should.be.equal('top')
+                should.exist(ns['myns'].tasks['xyz'].name)
+                ns['myns'].tasks['xyz'].description.should.be.equal('')
+
+            it 'should associate functions correctly', ->
+                should.exist(ns['general'].tasks['top'].fun)
+                _.is-function(ns['general'].tasks['top'].fun).should.be.equal(true)
+                should.exist(ns['myns'].tasks['xyz'].fun)
+                _.is-function(ns['myns'].tasks['xyz'].fun).should.be.equal(true)
+
+
+    describe 'run', (empty)->
+        var fake-conn
+        it 'should return a resolved promise', (done) ->
+            fake-conn := new (require('events').EventEmitter)()
+            sinon.stub tsk.inner-module().connect, 'createConnection', -> {}
+            sinon.stub tsk.inner-module().connect, 'connect', -> fake-conn
+            spy := sinon.stub tsk.inner-module().connect, 'sendCommand', ->
+                    return create-resolved-promise()
+
+            fake-conn.end = sinon.stub().returns(true)
+
+            p := tsk.run({}, 'hey', {})
+            fake-conn.emit 'ready'
+            p `notifies-on-success` done
+
+        it 'should send the correct command', ->
+            spy.calledOnce.should.be.equal(true)
+            spy.firstCall.args[1].should.be.equal('hey')
+
+        it 'should be called twice', (done) ->
+            fake-conn := new (require('events').EventEmitter)()
+            fake-conn.end = sinon.stub().returns(true)
+            p := tsk.run({}, [ 'a', 'b' ], {})
+            fake-conn.emit 'ready'
+            p `notifies-on-success` done
+
+        it 'should send two commands', ->
+            spy.calledThrice.should.be.equal(true)
+            spy.secondCall.args[1].should.be.equal('a')
+            spy.thirdCall.args[1].should.be.equal('b')
+
+    describe 'sequence', (empty)->       
+        var namespace 
+        namespace :=
+                  test: 
+                        tasks: 
+                                task1:
+                                     name: 'task1'   
+                                     fun: ->
+                                        d = __q.defer()
+                                        d.resolve('task finished')
+                                        return d.promise
+
+                                taskfail:
+                                     name: 'taskfail'   
+                                     fun: ->
+                                        d = __q.defer()
+                                        d.reject('task finished with error')
+                                        return d.promise
+        var s1                                
+        it 'should execute a single task', (done) ->
+            s1 := sinon.spy(namespace['test'].tasks['task1'], 'fun')
+            promise = tsk.sequence(namespace.test, 'task1')
+            promise `notifies-on-success` done
+
+        it 'should execute only once the task', ->
+            s1.called-once.should.be.equal(true)
+
+        it 'should execute an array sequence', (done) ->
+            promise = tsk.sequence(namespace.test, [ 'task1', 'task1'])
+            promise `notifies-on-success` done 
+            
+        it 'should execute an array sequence', ->
+            s1.calledThrice.should.be.equal(true)
+
+        it 'should not complete a sequence if a task fails', (done) ->
+            promise = tsk.sequence(namespace.test, [ 'taskfail', 'task1'])
+            promise `notifies-on-fail` done
+
+        it 'should not execute a task after a failed one', ->
+            s1.calledThrice.should.be.equal(true)
 
 
 

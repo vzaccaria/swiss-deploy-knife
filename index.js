@@ -1,2 +1,2 @@
 
-module.exports = require('./lib/sk-lib')
+module.exports = require('./lib/task')

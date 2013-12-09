@@ -14,7 +14,7 @@
   invokeActions = require('../lib/actions').invokeActions;
   ref$ = require('../lib/tunnel'), mountTunnel = ref$.mountTunnel, unmountTunnel = ref$.unmountTunnel;
   printEnv = require('../lib/print').printEnv;
-  getInterestedNodes = require('../lib/sk-lib').getInterestedNodes;
+  getInterestedNodes = require('../lib/task').getInterestedNodes;
   dispOk = function(){
     return winston.info("Ok");
   };

@@ -14,7 +14,7 @@ winston                          = require('winston')
 { invoke-actions }               = require('../lib/actions')
 { mount-tunnel, unmount-tunnel } = require('../lib/tunnel')
 { print-env }                    = require('../lib/print')
-{ get-interested-nodes }         = require('../lib/sk-lib')
+{ get-interested-nodes }         = require('../lib/task')
 
 disp-ok = -> winston.info "Ok"
 disp-ko = -> 

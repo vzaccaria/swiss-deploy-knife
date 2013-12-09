@@ -161,40 +161,48 @@ _module = ->
 
         [ node, filename ]  = options.to / ':'
 
-        if not options.in[node]?
-             d.reject("Sorry, #node does not exist")
+        if node  != 'local'
+
+            if not options.in[node]?
+                 d.reject("Sorry, #node does not exist")
 
 
-        nn = options.in[node].path
+            nn = options.in[node].path
 
-        disp "Saving output to ftp://#{nn.hostname}:#filename"
+            disp "Saving output to ftp://#{nn.hostname}:#filename"
 
-        dd = setup-temporary-directory()
+            dd = setup-temporary-directory()
 
-        fs.write-file "#dd/temp.json",(what), (err) ->
+            fs.write-file "#dd/temp.json", (what), (err) ->
 
-            if err 
-                d.reject("Problems writing #dd/temp.json")
-                return 
+                if err 
+                    d.reject("Problems writing #dd/temp.json")
+                    return 
 
-            us  = nn.username
-            url = nn.hostname
-            pw  = require(nn.credentials)[url][us]
+                us  = nn.username
+                url = nn.hostname
+                pw  = require(nn.credentials)[url][us]
 
-            args = [
-                        "-e"
-                        lftp-script-put(us, pw, url, "#dd/temp.json", filename)
-                        ]
+                args = [
+                            "-e"
+                            lftp-script-put(us, pw, url, "#dd/temp.json", filename)
+                            ]
 
-            cc = spawn 'lftp', args
+                cc = spawn 'lftp', args
 
-            cc.on 'error', ->
-                d.reject("Failed connection")    
+                cc.on 'error', ->
+                    d.reject("Failed connection")    
 
-            cc.on 'close', ->
-                d.resolve('Exited from ftp')
+                cc.on 'close', ->
+                    d.resolve('Exited from ftp')
 
-        return d.promise
+            return d.promise
+
+        else 
+            dirn = filename
+            txt = what.text
+            txt.to "#dirn/#{what.filename}"
+
 
 
     init = (data) -> 
@@ -203,6 +211,7 @@ _module = ->
     iface = { 
         get: get
         put: put
+        save: save
         open-terminal: open-terminal
     }
   

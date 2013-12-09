@@ -1,13 +1,15 @@
-debug = false 
+{ namespace, task, build-tasks, run, bsh, sequence } = require('swiss-deploy-knife/lib/task')
+{ print-as-table }                                   = require('swiss-deploy-knife/lib/print')
+{ get, put, open-terminal, save }                    = require('swiss-deploy-knife/lib/ssh')
+{ create-lezione, create-esercitazione }             = require('swiss-deploy-knife/lib/jekyll')
 
-fn = 'swiss-deploy-knife'
+save-remotely = save
 
-if debug
-  fn := "#{__dirname}/../index.js"
+copy = (x) ->
+  cmm = "echo '#x' | pbcopy"
+  console.log  "Copying '#x' to the clipboard"
+  shelljs.exec(cmm)
 
-{ namespace, task, build-tasks, run, bsh, sequence } = require(fn)
-{ print-as-table }                = require('swiss-deploy-knife/lib/print')
-{ get, put, open-terminal, save } = require('swiss-deploy-knife/lib/ssh')
 
 nodes = 
     w1:
@@ -156,6 +158,22 @@ ns = build-tasks [
 
             task 'fl', 'List forever processes', ->
               run @remote, f "list" 
+            ...
+
+        namespace 'j', 'jekyll website tasks',
+
+            task 'lez', "Creates a post for a lezione, use -c 'tag1,tag2,...' for tags", ->
+              post = create-lezione @args.command
+              # console.log save-remotely, create-lezione
+              save post, { to: "local:/Users/zaccaria/short/website/_posts/", in: @nodes }
+              copy "vi /Users/zaccaria/short/website/_posts/#{post.filename}"
+
+            task 'ese', "Creates a post for an esercitazione, use -c 'tag1,tag2,...' for tags", ->
+              post = create-esercitazione @args.command
+              # console.log save-remotely, create-lezione
+              save post, { to: "local:/Users/zaccaria/short/website/_posts/", in: @nodes }
+              copy "vi /Users/zaccaria/short/website/_posts/#{post.filename}"
+
             ...
 
         namespace 'iwtest', 'tasks associated with testing the infoweb project',
