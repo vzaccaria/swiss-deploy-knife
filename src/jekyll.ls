@@ -81,26 +81,48 @@ create-content = (date, sub-category, tags) ->
     * #{taglist}
 
     """
-  n-date = sub-category + " del " + date.format('D/M') + " su #{taglist}"
+  var n-date
+  if tags.length is 0
+    n-date = sub-category + " del " + date.format('D/M') 
+  else
+    n-date = sub-category + " del " + date.format('D/M') + " su #{taglist}"
   r = { name: n-date, content: text}
   return r
 
 
-
-
-
 create-lezione = (comma-separated-tags) ->
-  tgs = comma-separated-tags / ','
+  var tgs
+  if comma-separated-tags?
+    tgs = comma-separated-tags / ','
+  else 
+    tgs = []
   {name, content} = create-content(moment(), 'lezione', tgs)
   po = create-post(name, content, 'infob', moment(), tgs)
   return po
 
+create-comunicazione = (comma-separated-tags) ->
+  var tgs
+  if comma-separated-tags?
+    tgs = comma-separated-tags / ','
+  else 
+    tgs = []
+  {name, content} = create-content(moment(), 'comunicazione', tgs)
+  po = create-post(name, content, 'infob', moment(), tgs)
+  return po
 
 create-esercitazione = (comma-separated-tags) ->
-  tgs = comma-separated-tags / ','
-  {name, content} = create-content(moment(), 'esercitazione', tgs)
-  po = create-post(name, content, 'infob', moment(), tgs)
+  pdeb "Creating esercitazione"
+  var tgs 
 
+  if comma-separated-tags?
+    tgs = comma-separated-tags / ','
+  else 
+    tgs = [] 
+
+  {name, content} = create-content(moment(), 'esercitazione', tgs)
+  pdeb "Creating final post"
+  po = create-post(name, content, 'infob', moment(), tgs)
+  pdeb "Returning post"
   return po
 
 _module = ->
@@ -121,6 +143,7 @@ _module = ->
       create-content: create-content
       create-lezione: create-lezione
       create-esercitazione: create-esercitazione
+      create-comunicazione: create-comunicazione
     }
   
     return iface

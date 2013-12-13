@@ -1,7 +1,7 @@
-{ namespace, task, build-tasks, run, bsh, sequence } = require('swiss-deploy-knife/lib/task')
-{ print-as-table }                                   = require('swiss-deploy-knife/lib/print')
-{ get, put, open-terminal, save }                    = require('swiss-deploy-knife/lib/ssh')
-{ create-lezione, create-esercitazione }             = require('swiss-deploy-knife/lib/jekyll')
+{ namespace, task, build-tasks, run, run-local, create-local, remove-local, zsh, bsh, sequence } = require('swiss-deploy-knife/lib/task')
+{ print-as-table }                                                                          = require('swiss-deploy-knife/lib/print')
+{ get, put, open-terminal, save, mirror }                                                   = require('swiss-deploy-knife/lib/ssh')
+{ create-lezione, create-esercitazione, create-comunicazione }                              = require('swiss-deploy-knife/lib/jekyll')
 
 save-remotely = save
 
@@ -11,15 +11,19 @@ copy = (x) ->
   shelljs.exec(cmm)
 
 
+mzsh = (c) ->
+        "zsh -l -c 'source .zshrc && #c'"
+
 nodes = 
     w1:
-        description:            "Website at www.vittoriozaccaria.net"
+        description: "Website at www.vittoriozaccaria.net"
 
         path: 
-          username: "vittoriozaccaria.net"
-          hostname: "217.64.195.216"
-          credentials: '/Users/zaccaria/.ssh/sftp_credentials.js'
-          access:    \ftp 
+
+          username    : "vittoriozaccaria.net"
+          hostname    : "217.64.195.216"
+          credentials : '/Users/zaccaria/.ssh/sftp_credentials.js'
+          access      : \ftp
           
         save-to:   "data"
 
@@ -27,85 +31,79 @@ nodes =
         description: "Hbomb"
 
         path: 
-          username: "zaccaria" 
-          hostname: "hbomb.elet.polimi.it" 
-          port: "22" 
-          credentials: '/Users/zaccaria/.ssh/id_rsa'
-          hosttype: 'linux' 
-          access: \ssh
+
+          username    : "zaccaria"
+          hostname    : "hbomb.elet.polimi.it"
+          port        : "22"
+          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          hosttype    : 'linux'
+          access      : \ssh
+          shell       : bsh
+          directory   : '~'
 
     s2: 
         description: "Vagrant box"
 
         path: 
-          from: \s1
-          use: 4444
-          username: "vagrant"
-          hostname: "127.0.0.1"
-          port: "2222"
-          credentials: '/Users/zaccaria/.ssh/id_rsa'
-          hosttype: 'linux' 
-          access: \ssh
+
+          from        : \s1
+          use         : 4444
+          username    : "vagrant"
+          hostname    : "127.0.0.1"
+          port        : "2222"
+          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          hosttype    : 'linux'
+          access      : \ssh
+          login:
+            shell       : bsh
+            run-as-sudo : true
+            directory   : '~/test/infoweb'
 
     s3:
         description: "Macbook"
 
         path: 
-          username: "zaccaria" 
-          hostname: "localhost" 
-          port: "22" 
-          credentials: '/Users/zaccaria/.ssh/id_rsa'
-          hosttype: 'mac' 
-          access: \ssh
 
-    default: 's2'
+          username    : "zaccaria"
+          hostname    : "localhost"
+          port        : "22"
+          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          hosttype    : 'mac'
+          access      : \ssh
+          login:
+            shell       : mzsh
+            run-as-sudo : false
+            directory   : '~/test/infoweb'
 
-x = (c) ->
-  bsh "cd ~/test/infoweb/infoweb && sudo #c"
+    s3root:
+        description: "Macbook"
 
-s = (c) ->
-  bsh "cd ~/test/infoweb/infoweb/node_modules/sails && sudo #c"
+        path: 
 
-f = (c) ->
-  bsh "cd ~/test/infoweb/infoweb && sudo forever #c"
+          username    : "zaccaria"
+          hostname    : "localhost"
+          port        : "22"
+          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          hosttype    : 'mac'
+          access      : \ssh
+          login:
+            shell       : mzsh
+            run-as-sudo : false
+            directory   : '~'
+
+    default: 's3'
+
 
 local-bin-dir = 'bin'
-
-b = (c) ->
-  "cd #local-bin-dir && #c"
-
 
 ns = build-tasks [
         namespace 'general', 'general commands applicable to almost all access modes',
 
-            # Use bound functions ~> inside tasks..
-            task 'top', 'inspects processes', -> 
-              run @remote, 'top -b -n 1 | head -n 12'
-
-            task 'df',  'inspects disk quotas', -> 
-              run @remote, 'df'
-
-            task 'free', ->
-              run @remote, 'free'
-
             task 'cmd', "Executes a command specified with -c `command`", ->
               run @remote, @args.command
 
-            task 'sysg', "Copies syslog locally", ->
-              get @remote, '/var/log/syslog', './syslog'
-
-            # task 'sysg-ls', "Copies syslog locally and launches log stash", ->
-            #   get @remote, '/var/log/syslog', '/tmp/syslog'
-            #   .then -> run-ls-syslog '/tmp/syslog'
-
-            task 'npm', "Executes an npm command", ->
-              run @remote, "npm #{@args.command}"
-
-            task 'snpm', "Executes an npm command with sudo", ->
-              run @remote, "sudo npm #{@args.command}"
-
             task 'dfj',  'inspects disk quotas', -> 
-              run @remote, 'source .zshrc && df-json' , { +silent }
+              run-local @remote, 'df-json' , { +silent }
               .then ~> JSON.parse it
               .then ~> 
                 opts = 
@@ -116,16 +114,6 @@ ns = build-tasks [
             task 'ssh', 'launches an ssh term on the remote node', ->
               open-terminal @remote 
 
-            task 'vg1', 'inspects a running instance of vagrant', ->
-              run @remote, [ "bash -l -c 'cd /data2/zaccaria && vagrant status | grep default'" ]
-
-            task 'vg2', 'inspects a running instance of vagrant (local)', ->
-              run @remote, [ "bash -l -c 'cd ~/docker/docker && vagrant status | grep default'" ]
-
-            task 'seq', 'sequence test', ->
-              sequence @, [ "df", "dfj" ]
-
-
 ## Remember to upload:
 #
 # #!/bin/sh
@@ -133,115 +121,183 @@ ns = build-tasks [
 #
 # as ngrok.sh
 
+        namespace 'mac', 'applicable to this mac', { default-node: 's3'}, 
+            task 'vagrant-check', 'inspects a running instance of vagrant (local)', ->
+              run @remote, [ "bash -l -c 'cd ~/docker/docker && vagrant status | grep default'" ]
+
+        namespace 'hbomb', 'applicable to hbomb', { default-node: 's1' },
+
+            task 'vagrant-check', 'inspects a running instance of vagrant', ->
+              run @remote, [ "bash -l -c 'cd /data2/zaccaria && vagrant status | grep default'" ]
+
+
+        namespace 'linux', 'general commands applicable to x86 hosts', { default-node: 's2' },
+
             task 'prepare-ngrok', 'Installs ngrok into target machine', ->
-              run @remote, [
-                                "mkdir -p #local-bin-dir"
-                                b "wget https://dl.ngrok.com/linux_386/ngrok.zip"
-                                b "unzip ngrok.zip"
-                                b "rm ngrok.zip"
-                                ]
+              run-local @remote, [
+                                    "mkdir -p #local-bin-dir"
+                                    "rm ngrok.zip"
+                                    "rm ngrok"
+                                    "wget https://dl.ngrok.com/linux_386/ngrok.zip"
+                                    "wget http://www.vittoriozaccaria.net/deposit/ngrok.sh"
+                                    "unzip ngrok.zip"
+                                    "rm ngrok.zip"
+                                    "mv ngrok #local-bin-dir"
+                                    "mv ngrok.sh #local-bin-dir"
+                                    ]
 
             task 'prepare-forever', 'Installs forever on target machine', ->
-              run @remote, "sudo npm install -g n forever"
+              run-local @remote, "npm install -g n forever"
 
-            task 'qe', 'Expose a specific port on the web', ->
-              run @remote, [ 
-                              "sudo forever start -c 'bash' #local-bin-dir/ngrok.sh -proto=http -log='stdout' #{@args.command}"
-                              "sudo forever logs 0"
-                              "sudo forever logs 0"
-                              "sudo forever logs 0"
-                              ]
-
-
-            task 'eq', 'End exposure', ->
-              run @remote, "sudo forever stop 0"
-
-            task 'fl', 'List forever processes', ->
-              run @remote, f "list" 
             ...
 
-        namespace 'j', 'jekyll website tasks',
+        namespace 'jekyll', 'jekyll website tasks', {default-node: 's3'},
 
-            task 'lez', "Creates a post for a lezione, use -c 'tag1,tag2,...' for tags", ->
-              post = create-lezione @args.command
+            task 'lezione', "Creates a post for a lezione, use -c 'tag1,tag2,...' for tags", ->
+              post = create-lezione @args.tags
               # console.log save-remotely, create-lezione
               save post, { to: "local:/Users/zaccaria/short/website/_posts/", in: @nodes }
               copy "vi /Users/zaccaria/short/website/_posts/#{post.filename}"
 
-            task 'ese', "Creates a post for an esercitazione, use -c 'tag1,tag2,...' for tags", ->
-              post = create-esercitazione @args.command
+            task 'esercitazione', "Creates a post for an esercitazione, use -c 'tag1,tag2,...' for tags", ->
+              post = create-esercitazione @args.tags
               # console.log save-remotely, create-lezione
               save post, { to: "local:/Users/zaccaria/short/website/_posts/", in: @nodes }
               copy "vi /Users/zaccaria/short/website/_posts/#{post.filename}"
 
+            task 'comunicazione', "Creates a post for a comunicazione, use -c 'tag1,tag2,...' for tags", ->
+              post = create-comunicazione @args.tags
+              # console.log save-remotely, create-lezione
+              save post, { to: "local:/Users/zaccaria/short/website/_posts/", in: @nodes }
+              copy "vi /Users/zaccaria/short/website/_posts/#{post.filename}"
+
+            task 'deploy', "Deploy the website", ->
+              run-local @remote, "cd /Users/zaccaria/short/website && make", { +silent }
+              .then ~> mirror { from: "local:/Users/zaccaria/short/website/_site", to: "w1:.", in: @nodes }
+
             ...
 
-        namespace 'iwtest', 'tasks associated with testing the infoweb project',
 
-            task 'prepare', "Installs globally grunt, sails, n and node 0.10.13", ->
-              run @remote, "sudo npm install -g grunt-cli sails n mocha forever"
-              .then ~> run @remote, "sudo n 0.10.13"
+        namespace 'infoweb', 'tasks associated with testing the infoweb project', {default-node: 's2'},
 
-            task 'cleanup', "Cleans up remote test directories", ->
-              run @remote, [
-                              bsh 'sudo rm -rf ~/test/infoweb'
+            task 'buildenv-create', "Creates the environment for infoweb, using default-node data", ->
+              create-local @remote 
 
-                              ]
-            task 'preprov', "Creates the test directories", ->
-              run @remote, [
-                              bsh 'sudo mkdir -p ~/test'
-                              bsh 'sudo mkdir -p ~/test/infoweb'
-                              ]
+            task 'buildenv-remove', "Removes the environment for infoweb, using default node data", ->
+              remove-local @remote
 
-            task 'prov', "Checks out repository in ~/test/infoweb", ->
-              run @remote, [ 
-                              bsh 'cd ~/test/infoweb && sudo svn co -q https://zaccaria@svn.ws.dei.polimi.it/multicube/trunk/devel/zaccaria/infoweb'
-                              ]
+            task 'buildenv-prepare', "Installs globally grunt, sails, n and node 0.10.13", ->
+              run-local @remote, "npm install -g grunt-cli sails n mocha forever", { +run-as-sudo }
+              .then ~> run-local @remote, "n 0.10.13"
 
-            task 'update', "Update repo in ~/test/infoweb", ->
-              run @remote, [ 
-                              bsh 'cd ~/test/infoweb && sudo svn update -q https://zaccaria@svn.ws.dei.polimi.it/multicube/trunk/devel/zaccaria/infoweb'
-                              ]
+            # ----
 
+            task 'src-checkout', "Checks out repository in ~/test/infoweb", ->
+              run-local @remote, 'svn co -q https://zaccaria@svn.ws.dei.polimi.it/multicube/trunk/devel/zaccaria/infoweb'
 
-            task 'install', "Executes `npm install` in ~/test/infoweb", ->
-              run @remote, [
-                              x 'npm install'
-                              ]
+            task 'src-update', "Update repo in ~/test/infoweb", ->
+              run-local @remote, 'svn update infoweb'
 
-            task 'build',   "Executes `grunt deploy` in ~/test/infoweb",   ->
-              run @remote, x('grunt deploy')
+            task 'src-link-packages', "Executes `npm install` in ~/test/infoweb", ->
 
-            task 'setup-tests', "Installs dependencies associated with tests (e.g., shelljs)", ->
-              run @remote, [ 
-                              x 'npm install shelljs'
-                              x 'npm install ansi-color-table'
-                              s 'npm install'
-                              ]
+              run-local @remote          , 'npm install'                          , { sub-dir: 'infoweb'}
+              .then ~> run-local @remote , 'npm install shelljs ansi-color-table' , { sub-dir: 'infoweb' }
+              .then ~> run-local @remote , 'npm install'                          , { sub-dir: 'infoweb/node_modules/sails' }
 
-            task 'be2-test', -> 
-              run @remote, x './scripts/be2-test', {+silent}
+            task 'src-compile',   "Executes `grunt deploy` in ~/test/infoweb",   ->
+              run-local @remote, 'grunt deploy', { sub-dir: 'infoweb'}
+
+            # ----
+
+            task 'test-be2', -> 
+              run-local @remote, './scripts/be2-test', { sub-dir: 'infoweb', +silent }
               .then ~> save it, { to: "w1:data/iwtest-be2.json", in: @nodes }
 
-            task 'be-test',  -> 
-              run @remote, x './scripts/be-test', {+silent}
+            task 'test-be',  -> 
+              run-local @remote, './scripts/be-test', { sub-dir: 'infoweb', +silent }
               .then ~> save it, { to: "w1:data/iwtest-be.json", in: @nodes }
 
-            task 'fe-test',  -> 
-              run @remote, x './scripts/fe-test', {+silent}
+            task 'test-fe',  -> 
+              run-local @remote, './scripts/fe-test', { sub-dir: 'infoweb', +silent }
               .then ~> save it, { to: "w1:data/iwtest-fe.json", in: @nodes }
 
-            task 'test', "Executes tests",   ->
-              sequence @, [ 'be-test', 'be2-test', 'fe-test' ]
+            task 'test-all', "Executes tests",   ->
+              sequence @, [ 'test-be', 'test-be2', 'test-fe' ]
 
-            task 'start', "Starts app in daemon mode",   ->
-              run @remote, f 'start infoweb/app.js'
 
-            task 'stop', "Stops app in daemon mode",   ->
-              run @remote, f 'stop infoweb/app.js'
+            # ---
 
-            task 'faststage', "Updates remote repo, runs `deploy` and `test`", ->
-              sequence @, ['update', 'build', 'test']
+            task 'test-fast-stage', "Updates and compiles", ->
+              sequence @, [
+                            'src-update'
+                            'src-link-packages'
+                            'src-compile'                           
+                            ]
+
+            task 'test-after-fast-staging', "Updates remote repo, runs `deploy` and `test`", ->
+              sequence @, [ 
+                            'test-fast-stage'
+                            'test-all'
+                            ]
+
+            task 'test-complete-stage', "Checks out and compiles", ->
+                          [
+                            'buildenv-remove', 
+                            'buildenv-create', 
+                            'src-checkout', 
+                            'src-link-packages', 
+                            'src-compile'               
+                            ]
+
+            task 'test-after-complete-staging', "Cleans up everything and reinstall to test", ->
+              sequence @, [ 
+                            'test-fast-stage'
+                            'test-all'
+                            ]
+
+            # ----
+
+            task 'test-e2e-start', "Starts app in test mode",   ->
+              run-local @remote, 'NODE_TEST=true forever start app.js', { sub-dir: 'infoweb/infoweb'}
+
+            task 'test-e2e-stop', "Stops app in test mode",   ->
+              run-local @remote, 'NODE_TEST=true forever stop app.js', { sub-dir: 'infoweb/infoweb'}
+
+            task 'test-e2e-engage', "End to end test",   ->
+              run-local @remote, './scripts/e2e-test', { sub-dir: 'infoweb', +silent }
+              .then ~> save it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
+              .then ~> run-local @remote, 'killall phantomjs'
+
+            task 'test-e2e', "Starts test server, tests e2e and shutsdown test server",   ->
+              sequence @, ['test-e2e-start', 'test-e2e-engage', 'test-e2e-stop']
+
+
+            # ----
+
+            task 'prod-start', "Starts app in production mode",   ->
+              run-local @remote, 'NODE_ENV=production forever start app.js', { sub-dir: 'infoweb/infoweb' }
+
+            task 'prod-stop', "Stops app in production  mode",   ->
+              run-local @remote, 'NODE_ENV=production forever stop app.js', { sub-dir: 'infoweb/infoweb'}
+
+            task 'prod-openport', "Opens 80 through ngrok", ->
+              auth = require('/Users/zaccaria/.ssh/ngrok_credentials.js').token
+              run-local @remote, [ "forever start -c 'bash' #local-bin-dir/ngrok.sh -authtoken #auth -subdomain=vz-infoweb-prod  -proto=http -log='stdout' 80 " ]
+
+            task 'prod-lift', "Lift app and start ngrok", ->
+              sequence @, ['prod-start', 'prod-openport']
+
+
+            # ----
+
+            task 'forever-stopall', "Close app", ->
+              run-local @remote, "forever stopall"
+
+            task 'forever-list', 'List forever processes', ->
+              run-local @remote, "forever list" 
+
+            task 'ssh', 'Launches an ssh term on the remote node', ->
+              open-terminal @remote 
 
             ...
         ]
@@ -251,7 +307,12 @@ module.exports.nodes = nodes
 module.exports.namespace = ns 
 
 
+            # task 'sysg', "Copies syslog locally", ->
+            #   get @remote, '/var/log/syslog', './syslog'
 
+            # task 'sysg-ls', "Copies syslog locally and launches log stash", ->
+            #   get @remote, '/var/log/syslog', '/tmp/syslog'
+            #   .then -> run-ls-syslog '/tmp/syslog'
 
 
 

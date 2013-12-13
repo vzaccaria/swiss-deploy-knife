@@ -8,3 +8,19 @@ scripts/parse-log.ls
 scripts/logstash.jar
 
 syslog
+
+src/actions.js
+
+src/config.js
+
+src/connect.js
+
+src/gen.js
+
+src/jekyll.js
+
+src/sk.js
+
+src/task.js
+
+src/test.js

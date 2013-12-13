@@ -30,7 +30,8 @@ psetup = (file) ->
         winston.remove(winston.transports.Console);
     else
         winston.remove(winston.transports.Console);
-        winston.add(winston.transports.Console, { +colorize })
+        # winston.add(winston.transports.Console, { level: 'error', +colorize })
+        winston.add(winston.transports.Console, { level: 'info', +colorize })
 
 
 _.mixin(_.str.exports());
@@ -70,11 +71,17 @@ argv     = optimist.usage(usage-string,
                 alias: 'f', description: 'Use this config file'
               latency:
                 alias: 'y', description: 'Wait for latency (ms)'
+              namespace:
+                alias: 's', description: 'Namespace for tasks', default: 'general'
               node:
                 alias: 'n', description: 'Specify target node or a comma separated list (e.g., -n s1,s2,s3)'
+              tags:
+                alias: 't', description: 'Specify a tag list separated by commas'
+              aliases:
+                alias: 'z', description: 'dumps aliases for zsh, needs a -s'
                          ).boolean(\l)
                           .boolean(\d)
-                          .boolean(\s)
+                          .boolean(\z)
                           .argv
 
 if(argv.help)
@@ -86,7 +93,7 @@ if not argv.file?
 psetup(argv.logile)
 
 ff = require("path").resolve(cwd, argv.file)
-disp "Using configuration file: #ff"
+# disp "Using configuration file: #ff"
 
 try 
   { nodes, namespace } = require(ff)
@@ -94,6 +101,20 @@ catch e
   disp-ko "Sorry, no configuration file found: #e"
   process.exit(0)
   
+if argv.aliases? and argv.aliases
+  # if not argv.namespace? or not namespace[argv.namespace]?
+  #     disp-ko "Please, specify a namespace"
+  # else
+  #   if argv.namespace?
+  #     ns = argv.namespace
+  #     for n,v of namespace[ns].tasks
+  #        console.log "alias #{ns}-#{n}='sk -f #{argv.file} -s #ns #n'"
+  #   else 
+      for ns, value of namespace 
+         for n,v of namespace[ns].tasks
+             console.log "alias #{ns}-#{n}='sk -f #{argv.file} -s #ns #n'"          
+
+      process.exit(0)
 
 if argv.list? and argv.list or argv.help? and argv.help
   print-env(nodes, namespace)
@@ -101,7 +122,6 @@ if argv.list? and argv.list or argv.help? and argv.help
 if not nodes.default? or not nodes[nodes.default]? 
   disp-ko "You should specify a default node"
   process.exit(0)
-
 
 ok = ->
   disp-ok it

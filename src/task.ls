@@ -47,7 +47,6 @@ _module = ->
                 let t = tt
                     td := td.then -> 
                         context.tasks[t].fun.apply(context)
-
             od.resolve(0)
             return td
         else
@@ -71,6 +70,11 @@ _module = ->
             description = a[n] 
             n = n + 1
 
+        opt = {}
+        if _.is-object(a[n]) and not (a[n].fun? or a[n].description? or a[n].name)
+            opt = a[n]
+            n = n + 1
+
         for t in a[n to ]
             tasks[t.name] = t
 
@@ -79,6 +83,8 @@ _module = ->
             description: description
             tasks: tasks
         }
+
+        _.extend(ns, opt)
 
         return ns
 
@@ -122,15 +128,77 @@ _module = ->
           return _.words(argv.node,',')
 
     bsh = (cmd) ->
-        return "bash -l -c '#cmd'"
-        return iface
+        "bash -l -c '#cmd'"
 
-    run = (local, command, options) ->
+    zsh = (c) ->
+        "zsh -l -c '#c'"
+
+    create-local = (remote-node, options) ->
+        if remote-node.login?.directory?
+            cm = "mkdir -p #{remote-node.login.directory}"
+            cm = 
+                | remote-node.login?.run-as-sudo? and (remote-node.login.run-as-sudo == true) => "sudo #cm"
+                | options?.run-as-sudo? and (options?.run-as-sudo == true) => "sudo #cm"
+                | _ => cm
+
+            return run(remote-node, cm)
+
+    remove-local = (remote-node, options) ->
+        if remote-node.login?.directory?
+            cm = "rm -rf #{remote-node.login.directory}"
+            cm = 
+                | remote-node.login?.run-as-sudo? and (remote-node.login.run-as-sudo == true) => "sudo #cm"
+                | options?.run-as-sudo? and (options?.run-as-sudo == true) => "sudo #cm"
+                | _ => cm 
+
+            return run(remote-node, cm)
+
+    run-local = (remote-node, comms, options) ->
+        var cm
+        var cd
+        new-commands = []
+        sending-commands = []
+
+        # console.log "1)", JSON.stringify(comms, null, 4)
+
+        if _.is-string comms
+            sending-commands.push comms 
+        else 
+            sending-commands = comms
+
+        # console.log "2)", JSON.stringify(sending-commands, null, 4)
+
+        for command in sending-commands
+
+            cm = 
+                | remote-node.login?.run-as-sudo? and (remote-node.login.run-as-sudo == true) => "sudo #command"
+                | options?.run-as-sudo? and (options?.run-as-sudo == true) => "sudo #command"
+                | _ => command
+
+            cd := 
+                | remote-node.login?.directory? and options?.sub-dir? => "cd #{remote-node.login.directory}/#{options.sub-dir} && #cm"
+                | remote-node.login?.directory? => "cd #{remote-node.login.directory} && #cm" 
+                | _ => cm
+
+            # console.log "3)", JSON.stringify(cd, null, 4)
+
+            if remote-node.login?.shell? && _.is-function(remote-node.login.shell)
+                cd := remote-node.login.shell cd
+
+            # console.log "4)", JSON.stringify(cd, null, 4)
+
+            new-commands := new-commands ++ [ cd ]    
+
+        # console.log new-commands
+        return run(remote-node, new-commands, options)
+
+
+    run = (remote-node, command, options) ->
 
         e = __q.defer()
         pdeb "Entering `run`"
         conn = connect.create-connection()
-        conn = connect.connect(conn, local)
+        conn = connect.connect(conn, remote-node)
         pdeb "Executing `run`"
         connect.register-msg-handlers(conn, e)
 
@@ -168,8 +236,12 @@ _module = ->
         build-tasks          : build-tasks
         bsh                  : bsh
         run                  : run
+        run-local            : run-local
         task                 : task
         get-interested-nodes : get-interested-nodes
+        create-local         : create-local
+        remove-local         : remove-local
+        zsh                  : zsh
 
     }
 

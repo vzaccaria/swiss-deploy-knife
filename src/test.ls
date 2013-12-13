@@ -132,11 +132,42 @@ describe 'actions', (empty)->
     act := require('./actions')
     var namespace 
     namespace :=
-          test: 
+            test: 
                 tasks: 
                         task1:
                              name: 'task1'   
                              fun: ->
+                                d = __q.defer()
+                                d.resolve('task finished')
+                                return d.promise
+                        taskfail:
+                             name: 'taskfail'   
+                             fun: ->
+                                d = __q.defer()
+                                d.reject('task finished with error')
+                                return d.promise
+            test2: 
+                tasks:
+                        task3:
+                            name: 'task3'                     
+                            fun: ->
+                                d = __q.defer()
+                                d.resolve('task finished')
+                                return d.promise
+                        taskfail:
+                             name: 'taskfail'   
+                             fun: ->
+                                d = __q.defer()
+                                d.reject('task finished with error')
+                                return d.promise
+
+
+            test3: 
+                default-node: 's2'
+                tasks:
+                        task3:
+                            name: 'task3'                     
+                            fun: ->
                                 d = __q.defer()
                                 d.resolve('task finished')
                                 return d.promise
@@ -172,6 +203,8 @@ describe 'actions', (empty)->
 
     var s1
     var s2
+    var s3 
+    var s4 
 
     describe 'actions.direct-call', (empty)->
         it '`module.direct-call` should invoke the correct task', (done) ->
@@ -262,6 +295,16 @@ describe 'actions', (empty)->
             p = act.invoke-actions(p, 's1', { _: [ 'test:task1'] }, nodes, namespace ) 
             p `notifies-on-success` done
 
+
+        it 'should invoke the correct task', (done) ->
+            act.inner-module().tunnel.mount-tunnel.restore()
+            act.inner-module().tunnel.unmount-tunnel.restore()
+            sinon.stub act.inner-module().tunnel, 'mountTunnel', create-resolved-promise
+            sinon.stub act.inner-module().tunnel, 'unmountTunnel', create-resolved-promise
+            p = create-resolved-promise() 
+            p = act.invoke-actions(p, 's1', { namespace: 'test', _: [ 'task1'] }, nodes, namespace ) 
+            p `notifies-on-success` done
+
         it 'should not invoke a non-existing task', (done) ->
             p = create-resolved-promise() 
             p = act.invoke-actions(p, 's1', { _: [ 'tes:task1'] }, nodes, namespace ) 
@@ -325,7 +368,62 @@ describe 'actions', (empty)->
 
             p `notifies-on-success` done
 
+        it 'should invoke the correct task when a default node is not present', (done) ->
+            act.inner-module().tunnel.mount-tunnel.restore()
+            act.inner-module().tunnel.unmount-tunnel.restore()
+            sinon.stub act.inner-module().tunnel, 'mountTunnel', create-resolved-promise
+            sinon.stub act.inner-module().tunnel, 'unmountTunnel', create-resolved-promise
+            s3 := sinon.spy(act.inner-module(), 'indirectCall')
+            s4 := sinon.spy(act.inner-module(), 'directCall')
+            s1 := sinon.spy(namespace['test2'].tasks['task3'], 'fun')
+            p = create-resolved-promise() 
+            p = act.invoke-actions(p, 's1', { _: [ 'test2:task3'] }, nodes, namespace ) 
+            p = p.then ->
+                    # console.log s4.get-call(0).args
+                    assert(s4.get-call(0).args[3].description is 'Hbomb')
+                    assert(s4.called-once)
+                    assert(s1.called-once)
+            p `notifies-on-success` done
 
+
+        it 'should invoke the correct task when a default node is present', (done) ->
+
+            act.inner-module().tunnel.mount-tunnel.restore()
+            act.inner-module().tunnel.unmount-tunnel.restore()
+            act.inner-module().direct-call.restore()
+            act.inner-module().indirect-call.restore()
+
+            sinon.stub act.inner-module().tunnel, 'mountTunnel', create-resolved-promise
+            sinon.stub act.inner-module().tunnel, 'unmountTunnel', create-resolved-promise
+
+            s3 := sinon.spy(act.inner-module(), 'indirectCall')
+            s4 := sinon.spy(act.inner-module(), 'directCall')
+            s1 := sinon.spy(namespace['test3'].tasks['task3'], 'fun')
+
+            p = create-resolved-promise() 
+            p = act.invoke-actions(p, 's1', { _: [ 'test3:task3'] }, nodes, namespace ) 
+            p = p.then ->
+                    assert(s3.get-call(0).args[3].description is 'Vagrant box')
+                    assert(s3.called-once)
+                    assert(s1.called-once)
+            p `notifies-on-success` done
+
+        it 'should invoke the correct task when a default node is present but forced from outside', (done) ->
+            act.inner-module().tunnel.mount-tunnel.restore()
+            act.inner-module().tunnel.unmount-tunnel.restore()
+            act.inner-module().direct-call.restore()
+            act.inner-module().indirect-call.restore()
+            sinon.stub act.inner-module().tunnel, 'mountTunnel', create-resolved-promise
+            sinon.stub act.inner-module().tunnel, 'unmountTunnel', create-resolved-promise
+            s3 := sinon.spy(act.inner-module(), 'indirectCall')
+            s4 := sinon.spy(act.inner-module(), 'directCall')
+            p = create-resolved-promise() 
+            p = act.invoke-actions(p, 's1', { _: [ 'test3:task3'], node: 's1' }, nodes, namespace ) 
+            p = p.then ->
+                    # console.log s4.get-call(0).args
+                    assert(s4.get-call(0).args[3].description is 'Hbomb')
+                    assert(s4.called-once)
+            p `notifies-on-success` done
 
 describe 'tasks and namespace', (empty)->
     var tsk
@@ -340,6 +438,9 @@ describe 'tasks and namespace', (empty)->
             tsk.task 'top', 'inspects processes', -> 
               tsk.run @remote, 'top -b -n 1 | head -n 12'
         tsk.namespace 'myns', 
+            tsk.task 'xyz', ->
+                console.log "no fun.."
+        tsk.namespace 'myns2', { default-node: 's3'},
             tsk.task 'xyz', ->
                 console.log "no fun.."
         ]
@@ -367,6 +468,10 @@ describe 'tasks and namespace', (empty)->
                 should.exist(ns['myns'].tasks['xyz'].fun)
                 _.is-function(ns['myns'].tasks['xyz'].fun).should.be.equal(true)
 
+            it 'should recognize a default node', ->
+                should.exist(ns['myns2'].tasks['xyz'].fun)
+                _.is-function(ns['myns2'].tasks['xyz'].fun).should.be.equal(true)
+                ns['myns2'].default-node.should.be.equal('s3')
 
     describe 'run', (empty)->
         var fake-conn
@@ -379,25 +484,83 @@ describe 'tasks and namespace', (empty)->
 
             fake-conn.end = sinon.stub().returns(true)
 
-            p := tsk.run({}, 'hey', {})
+            p := tsk.run({}, 'a', {})
             fake-conn.emit 'ready'
             p `notifies-on-success` done
 
         it 'should send the correct command', ->
             spy.calledOnce.should.be.equal(true)
-            spy.firstCall.args[1].should.be.equal('hey')
+            spy.firstCall.args[1].should.be.equal('a')
 
         it 'should be called twice', (done) ->
             fake-conn := new (require('events').EventEmitter)()
             fake-conn.end = sinon.stub().returns(true)
-            p := tsk.run({}, [ 'a', 'b' ], {})
+            p := tsk.run({}, [ 'b', 'c' ], {})
             fake-conn.emit 'ready'
             p `notifies-on-success` done
 
         it 'should send two commands', ->
             spy.calledThrice.should.be.equal(true)
-            spy.secondCall.args[1].should.be.equal('a')
-            spy.thirdCall.args[1].should.be.equal('b')
+            spy.secondCall.args[1].should.be.equal('b')
+            spy.thirdCall.args[1].should.be.equal('c')
+
+        it 'run-local should interpret options', (done) ->
+            fake-conn := new (require('events').EventEmitter)()
+            fake-conn.end = sinon.stub().returns(true)
+            p := tsk.run-local({}, ['d'], {})
+            fake-conn.emit 'ready'
+            p `notifies-on-success` (done)
+
+        it 'run-local should have invoked run underneath', ->
+            spy.lastCall.args[1].should.be.equal('d')
+
+        it 'run-local should interpret options', (done) ->
+            fake-conn := new (require('events').EventEmitter)()
+            fake-conn.end = sinon.stub().returns(true)
+            da-node = 
+                login:
+                    run-as-sudo : true
+                    directory   : '~/test/infoweb'
+
+            p := tsk.run-local(da-node, ['a'], {})
+            fake-conn.emit 'ready'
+            p `notifies-on-success` (done)
+
+        it 'run-local should have invoked run underneath', ->
+            spy.lastCall.args[1].should.be.equal('cd ~/test/infoweb && sudo a')
+
+        it 'run-local should interpret options', (done) ->
+            fake-conn := new (require('events').EventEmitter)()
+            fake-conn.end = sinon.stub().returns(true)
+            da-node = 
+                login:
+                    shell       : tsk.bsh
+                    run-as-sudo : false
+                    directory   : '~/test/infoweb'
+
+            p := tsk.run-local(da-node, ['a'], {})
+            fake-conn.emit 'ready'
+            p `notifies-on-success` (done)
+
+        it 'run-local should have invoked run underneath', ->
+            spy.lastCall.args[1].should.be.equal('bash -l -c \'cd ~/test/infoweb && a\'')
+
+
+        it 'run-local should interpret options', (done) ->
+            fake-conn := new (require('events').EventEmitter)()
+            fake-conn.end = sinon.stub().returns(true)
+            da-node = 
+                login:
+                    run-as-sudo : true
+                    directory   : '~/test/infoweb'
+
+            p := tsk.run-local(da-node, 'abc', {})
+            fake-conn.emit 'ready'
+            p `notifies-on-success` (done)
+
+        it 'run-local should have invoked run underneath', ->
+            spy.lastCall.args[1].should.be.equal('cd ~/test/infoweb && sudo abc')
+
 
     describe 'sequence', (empty)->       
         var namespace 

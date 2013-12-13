@@ -44,6 +44,11 @@ remove-temporary-directory = (dir) ->
 lftp-script-put = (us, pw, url, f, r) -> 
     """set ftp:ssl-allow false; open ftp://#us:#pw@#url; put #f -o #r; bye;"""
 
+lftp_opts = "--reverse --ignore-time --verbose=1 --use-cache --allow-chown --allow-suid --no-umask --parallel=2 --exclude-glob .svn"
+
+lftp-script-mirror = (us, pw, url, f, t) -> 
+    """set ftp:ssl-allow false; open ftp://#us:#pw@#url; mirror #{lftp_opts} #{f} #{t}; bye;"""
+
 _module = ->
 
     var scope 
@@ -153,55 +158,89 @@ _module = ->
        d.reject("Invalid #{address.access} specified as access mode.")
        return d.promise
 
-    save = (what, options) ->
+    mirror = (options) ->
         d = __q.defer()
 
-        if not options.in? and not options.to?
+        if not options.from? or not options.to? or not options.in?
              d.reject("Sorry, invalid options for save")
+        else 
+             [ local, frm ]    = options.from / ':'
+             [ node, dirname ] = options.to / ':'
 
-        [ node, filename ]  = options.to / ':'
+             if local != 'local'
+                     d.reject("Sorry, mirror at the moment accepts only one remote destination")
+                     return d.promise
 
-        if node  != 'local'
-
-            if not options.in[node]?
-                 d.reject("Sorry, #node does not exist")
-
-
-            nn = options.in[node].path
-
-            disp "Saving output to ftp://#{nn.hostname}:#filename"
-
-            dd = setup-temporary-directory()
-
-            fs.write-file "#dd/temp.json", (what), (err) ->
-
-                if err 
-                    d.reject("Problems writing #dd/temp.json")
-                    return 
-
+             if not options?.in?[node]?.path?.access? == 'ftp'
+                     d.reject("Sorry, #node does not exist or it does not have ftp access")
+             else 
+                nn = options.in[node].path
                 us  = nn.username
                 url = nn.hostname
-                pw  = require(nn.credentials)[url][us]
-
+                pw  = require(nn.credentials)[url][us] 
                 args = [
                             "-e"
-                            lftp-script-put(us, pw, url, "#dd/temp.json", filename)
+                            lftp-script-mirror(us, pw, url, frm, dirname)
                             ]
-
-                cc = spawn 'lftp', args
-
+                pdeb "Executing command `lftp` #{args[0]}, #{args[1]}"
+                cc = spawn 'lftp', args, stdio: \inherit 
                 cc.on 'error', ->
                     d.reject("Failed connection")    
 
                 cc.on 'close', ->
-                    d.resolve('Exited from ftp')
+                    d.resolve('Exited from ftp') 
 
-            return d.promise
+        return d.promise      
+      
 
+    save = (what, options) ->
+        d = __q.defer()
+
+        if not options.in? or not options.to?
+             d.reject("Sorry, invalid options for save")
         else 
-            dirn = filename
-            txt = what.text
-            txt.to "#dirn/#{what.filename}"
+            [ node, filename ]  = options.to / ':'
+            pdeb "Saving to #node - #filename"
+            if node  != 'local'
+
+                nn = options.in[node].path
+                if not options.in[node]? or not options.in[node].path.access == 'ftp'
+                     d.reject("Sorry, #node does not exist or it does not have ftp access")
+
+
+                nn = options.in[node].path
+                disp "Saving output to ftp://#{nn.hostname}:#filename"
+                dd = setup-temporary-directory()
+                fs.write-file "#dd/temp.json", (what), (err) ->
+
+                    if err 
+                        d.reject("Problems writing #dd/temp.json")
+                        return 
+
+                    us  = nn.username
+                    url = nn.hostname
+                    pw  = require(nn.credentials)[url][us]
+
+                    args = [
+                                "-e"
+                                lftp-script-put(us, pw, url, "#dd/temp.json", filename)
+                                ]
+
+                    cc = spawn 'lftp', args
+
+                    cc.on 'error', ->
+                        d.reject("Failed connection")    
+
+                    cc.on 'close', ->
+                        d.resolve('Exited from ftp')
+
+
+            else 
+                dirn = filename
+                txt = what.text
+                txt.to "#dirn/#{what.filename}"
+                d.resolve("Saved to file")
+        return d.promise        
 
 
 
@@ -212,6 +251,7 @@ _module = ->
         get: get
         put: put
         save: save
+        mirror: mirror
         open-terminal: open-terminal
     }
   

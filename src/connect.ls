@@ -28,7 +28,7 @@ _module = ->
 
     send-command = (conn, c, options) ->
       d = __q.defer()
-      pdeb "Executing command #c"
+      disp "Executing command #c"
       output = ""
       register-msg-handlers(conn, d)
       conn.exec c, (err, stream) ->

@@ -37,15 +37,15 @@ _module = ->
     print = ->
       pdisp this
 
-    decompose-task = (tval) ->
+    decompose-task = (tval, default-ns) ->
        [tns, t] = tval / ':'
        if not t? 
             t   := tns 
-            tns := 'general'
+            tns := default-ns
        return [tns, t]    
           
 
-    direct-call = (p, tns, t, target-node, argv, namespace, nodes) ->
+    @direct-call = (p, tns, t, target-node, argv, namespace, nodes) ->
 
               if not nodes?
                 return p.then-reject("Invalid nodes specified")
@@ -65,11 +65,12 @@ _module = ->
                 args:       argv 
                 tasks:      namespace[tns].tasks
                 nodes:      nodes
+                namespace:  namespace
 
               p = p.then( -> task-function.apply(context))      
               return p
 
-    indirect-call = (p, tns, t, target-node, argv, namespace, nodes) ->
+    @indirect-call = (p, tns, t, target-node, argv, namespace, nodes) ->
 
               if not nodes?
                 return p.then-reject("Invalid nodes specified")
@@ -87,6 +88,8 @@ _module = ->
               disp "Launching `#tns:#t` on `#{address.hostname}:#{address.port}` through `#{through.hostname}`"
               p = tunnel.mount-tunnel(target-node, p, argv.latency, nodes)
 
+              # console.log target-node
+
               context = 
                 remote: 
                   username:    address.username
@@ -94,6 +97,8 @@ _module = ->
                   port:        address.use
                   credentials: address.credentials
                   access:      address.access 
+                  namespace:   namespace
+                  login:       target-node.path.login
 
                 tasks:      namespace[tns].tasks
 
@@ -122,10 +127,19 @@ _module = ->
 
         for tval in argv._ 
 
-          [tns, t] = decompose-task(tval)
+          [tns, t] = decompose-task(tval, argv.namespace)
 
           if not namespace[tns]?
+              pdeb tns 
+              pdeb t
+              pdeb tval
+              pdeb argv.namespace
               return p.then-reject("Please specify a valid namespace")
+
+          if namespace[tns].default-node? and not argv.node?
+            # We are using the one defined in the nodes directory.
+            # Lets switch to the one defined by the namespace
+            target-node := nodes[namespace[tns].default-node]
 
           if t in _.pluck(namespace[tns].tasks, 'name')
             if not target-node.path.from?
@@ -140,8 +154,8 @@ _module = ->
         print:  print
         invoke-actions : invoke-actions
         inner-module   : inner-module 
-        direct-call    : direct-call
-        indirect-call  : indirect-call
+        direct-call    : @direct-call
+        indirect-call  : @indirect-call
     }
   
     return iface
