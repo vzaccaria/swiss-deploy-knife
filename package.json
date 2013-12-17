@@ -6,9 +6,6 @@
   "bin": {
     "sk": "./bin/sk"
   },
-  "scripts": {
-    "postinstall": "sh ./scripts/postinstall.sh"
-  },
   "repository": "",
   "keywords": [
     "log",
