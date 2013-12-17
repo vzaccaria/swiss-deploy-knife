@@ -32,6 +32,8 @@
     "chai-as-promised": "~4.1.0",
     "chai": "~1.8.1",
     "mocha-as-promised": "~1.4.1",
-    "assert": "~1.0.0"
+    "assert": "~1.0.0",
+    "sinon": "~1.7.3",
+    "q": "~0.9.7"
   }
 }
