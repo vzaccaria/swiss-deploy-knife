@@ -604,13 +604,99 @@ describe 'tasks and namespace', (empty)->
             s1.calledThrice.should.be.equal(true)
 
 
+describe 'ssh commands', (empty)->
+
+    var s1, s2, s3, fake-proc, target-module, nodes, result, command
+
+    target-module := require('./ssh')
+
+    nodes :=
+        s1:
+            description: "Hbomb"
+            path: 
+              username: "zaccaria" 
+              hostname: "hbomb.elet.polimi.it" 
+              port: "22" 
+              credentials: '/Users/zaccaria/.ssh/id_rsa'
+              hosttype: 'linux' 
+              access: \ssh
+        s2: 
+            description: "Vagrant box"
+
+            path: 
+              from: \s1
+              use: 4444
+              username: "vagrant"
+              hostname: "127.0.0.1"
+              port: "2222"
+              credentials: '/Users/zaccaria/.ssh/id_rsa'
+              hosttype: 'linux' 
+              access: \ssh
 
 
+    it '`module` should contain injectable methods', ->
+        should.exist(target-module.inner-module().child_process.spawn)
+        should.exist(target-module.inner-module().shelljs)
+        should.exist(target-module.inner-module().setup-temporary-directory)
 
+    it '`module` should invoke load correctly..', (done) ->
+        fake-proc:= new (require('events').EventEmitter)()
+        sinon.stub target-module.inner-module(), 'getCredentials', -> 
+            return \xyz
+        s1 := sinon.stub target-module.inner-module(), 'setupTemporaryDirectory', ->
+            return 'pippo'
 
+        s2 := sinon.stub target-module.inner-module(), 'removeTemporaryDirectory', ->
 
+        s3 := sinon.stub target-module.inner-module().shelljs, 'cat', ->
+                " [ { \"data\"   :      1 } ] "
 
+        sinon.stub target-module.inner-module().child_process, 'spawn', -> 
+            command := arguments
+            fake-proc 
 
+        promise = target-module.load { from: 's1:abc', in: nodes }
+
+        result := {}
+
+        promise = promise.then -> 
+            result := it
+
+        fake-proc.emit 'close'
+
+        promise `notifies-on-success` done
+
+    it '`module` should invoke tmp dir functions', ->
+        s1.calledOnce.should.be.equal(true)
+        s2.calledOnce.should.be.equal(true)
+        s3.calledOnce.should.be.equal(true)
+        command[1][1].should.be.equal('set ftp:ssl-allow false; open ftp://zaccaria:xyz@hbomb.elet.polimi.it; get abc -o pippo/temp.json; bye;')
+        should.exist(result)
+        should.exist(result[0])
+        should.exist(result[0].data)
+        result[0].data.should.be.equal(1)
+ 
+    it '`module` should invoke read correctly and recognize errors..', (done) ->
+        fake-proc := new (require('events').EventEmitter)()
+        promise = target-module.load { from: 's1:abc', in: nodes }
+        result := {}
+        promise = promise.then -> 
+            result := it
+        fake-proc.emit 'error'
+        promise `notifies-on-fail` done
+
+    it '`should invoke save correctly..', (done) ->
+        fake-proc:= new (require('events').EventEmitter)()
+        sinon.stub target-module.inner-module().fs, 'writeFile', (what, how, after) ->
+            after()
+        promise = target-module.save { d: 1}, { to: 's2:abc', in: nodes }
+        fake-proc.emit 'close'
+        promise `notifies-on-success` done
+
+    it 'should invoke tmp dir functions', ->
+        s1.calledThrice.should.be.equal(true)
+        s2.calledThrice.should.be.equal(true)
+        command[1][1].should.be.equal('set ftp:ssl-allow false; open ftp://vagrant:xyz@127.0.0.1; put pippo/temp.json -o abc; bye;')
 
 
 
