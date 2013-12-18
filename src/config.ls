@@ -99,9 +99,9 @@ nodes =
 
 local-bin-dir = 'bin'
 
-if process.env.HOSTNAME is 'hbomb'
+if require('os').hostname() is 'hbomb'
   delete nodes['s2'].path.from
-  delete nodes['s2'].path.through
+  delete nodes['s2'].path.use
 
 ns = build-tasks [
         namespace 'general', 'general commands applicable to almost all access modes',

@@ -33,7 +33,6 @@ _module = ->
 
       does-exist = (f) ->
         x = shelljs.test('-e', path.resolve(f))
-        console.log path.resolve(f),x
         return x
 
       res = 
