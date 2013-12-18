@@ -14,6 +14,10 @@ copy = (x) ->
 mzsh = (c) ->
         "zsh -l -c 'source .zshrc && #c'"
 
+
+home = process.env.HOME 
+ssh-cred = "#home/.ssh/id_rsa"
+
 nodes = 
     w1:
         description: "Website at www.vittoriozaccaria.net"
@@ -22,7 +26,7 @@ nodes =
 
           username    : "vittoriozaccaria.net"
           hostname    : "217.64.195.216"
-          credentials : '/Users/zaccaria/.ssh/sftp_credentials.js'
+          credentials : "#home/.ssh/sftp_credentials.js"
           access      : \ftp
           
         save-to:   "data"
@@ -35,7 +39,7 @@ nodes =
           username    : "zaccaria"
           hostname    : "hbomb.elet.polimi.it"
           port        : "22"
-          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          credentials : ssh-cred
           hosttype    : 'linux'
           access      : \ssh
           shell       : bsh
@@ -51,7 +55,7 @@ nodes =
           username    : "vagrant"
           hostname    : "127.0.0.1"
           port        : "2222"
-          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          credentials : ssh-cred
           hosttype    : 'linux'
           access      : \ssh
           login:
@@ -67,7 +71,7 @@ nodes =
           username    : "zaccaria"
           hostname    : "localhost"
           port        : "22"
-          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          credentials : ssh-cred
           hosttype    : 'mac'
           access      : \ssh
           login:
@@ -83,7 +87,7 @@ nodes =
           username    : "zaccaria"
           hostname    : "localhost"
           port        : "22"
-          credentials : '/Users/zaccaria/.ssh/id_rsa'
+          credentials : ssh-cred
           hosttype    : 'mac'
           access      : \ssh
           login:
