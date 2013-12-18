@@ -15,6 +15,7 @@ winston                          = require('winston')
 { mount-tunnel, unmount-tunnel } = require('../lib/tunnel')
 { print-env }                    = require('../lib/print')
 { get-interested-nodes }         = require('../lib/task')
+{ get-base-config-path }         = require('../lib/config-search')
 
 disp-ok = -> winston.info "Ok"
 disp-ko = -> 
@@ -88,9 +89,14 @@ if(argv.help)
   optimist.showHelp()
 
 if not argv.file?
-  argv.file = "./config.js"
+  argv.file = get-base-config-path()
+  if not argv.file?
+    disp-ko "Sorry, no configuration file found: #e"
+    process.exit(0)    
 
-psetup(argv.logile)
+psetup(argv.logfile)
+
+disp("Using file: #{argv.file}")
 
 ff = require("path").resolve(cwd, argv.file)
 # disp "Using configuration file: #ff"
