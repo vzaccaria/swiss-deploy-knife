@@ -12,6 +12,7 @@
     "deploy",
     "logstash"
   ],
+  "engine": "node 0.10.13",
   "author": "Vittorio Zaccaria",
   "license": "BSD",
   "dependencies": {
