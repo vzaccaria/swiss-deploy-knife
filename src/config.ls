@@ -15,7 +15,7 @@ mzsh = (c) ->
         "zsh -l -c 'source .zshrc && #c'"
 
 
-home = process.env.HOME 
+home     = process.env.HOME
 ssh-cred = "#home/.ssh/id_rsa"
 
 nodes = 
@@ -49,7 +49,6 @@ nodes =
         description: "Vagrant box"
 
         path: 
-
           from        : \s1
           use         : 4444
           username    : "vagrant"
@@ -99,6 +98,10 @@ nodes =
 
 
 local-bin-dir = 'bin'
+
+if process.env.HOSTNAME is 'hbomb'
+  delete nodes['s2'].path.from
+  delete nodes['s2'].path.through
 
 ns = build-tasks [
         namespace 'general', 'general commands applicable to almost all access modes',
