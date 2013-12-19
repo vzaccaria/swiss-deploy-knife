@@ -75,8 +75,9 @@ _module = ->
             | _ => [ it, value ]
 
         opt = { from: options.to, in: options.in }
+        logt = -> console.log JSON.stringify(it, null, 4)
 
-        return load(opt).then(combine).then(-> save it, options)
+        return load(opt).then(logt).then(combine).then(logt).then(-> save it, options)
 
 
     open-terminal = (address) ->
