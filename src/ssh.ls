@@ -66,8 +66,8 @@ _module = ->
     @remove-temporary-directory = (dir) ->
         shelljs.rm '-rf', dir 
 
-    @get-credentials = (credentials, url, user ) ->
-            return require(credentials)[url][us]
+    @get-credentials = (credentials, url, user) ->
+            return require(credentials)[url][user]
 
     append = (value, options) ->
         combine = ->
