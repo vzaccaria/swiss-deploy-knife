@@ -71,9 +71,11 @@ _module = ->
 
     append = (value, options) ->
         value = JSON.parse(value)
+
         combine = ->
-            | _.is-array(it) => it ++ [ value ]
-            | _ => [ it, value ]
+            let v = value 
+                | _.is-array(it) => it ++ [  v ]
+                | _ => [ it, v ]
 
         opt = { from: options.to, in: options.in }
         logt = -> 
