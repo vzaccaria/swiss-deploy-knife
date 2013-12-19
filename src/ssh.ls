@@ -73,12 +73,16 @@ _module = ->
         value = JSON.parse(value)
 
         combine = ->
-                | _.is-array(it) => it ++ [  v ]
-                | _ => [ it, v ]
+            res = 
+                | _.is-array(it) => [ value ] ++ it
+                | _ => [ value, it ]
+            return res
 
         opt = { from: options.to, in: options.in }
+
         logt = -> 
-            console.log JSON.stringify(it, null, 4)
+            # console.log JSON.stringify(it, null, 4)
+            # disp-ko(typeof it)
             return it
 
         p = load(opt).then(logt).then(combine).then(logt).then(->save(it, options))
@@ -211,6 +215,7 @@ _module = ->
                             data = JSON.parse(dta)
                         catch error
                             d.reject(error)
+                            return
                         d.resolve(data)
 
             else 
@@ -242,7 +247,7 @@ _module = ->
 
                 dd = setup-temporary-directory()
 
-                fs.write-file "#dd/temp.json", (what), (err) ->
+                fs.write-file "#dd/temp.json", (JSON.stringify(what, null, 4)), (err) ->
 
                     if err 
                         d.reject("Problems writing #dd/temp.json")
