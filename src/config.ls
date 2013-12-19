@@ -218,7 +218,7 @@ ns = build-tasks [
 
             task 'test-be2', -> 
               run-local @remote, './scripts/be2-test', { sub-dir: 'infoweb', +silent }
-              .then ~> save it, { to: "w1:data/iwtest-be2.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-be2.json", in: @nodes }
 
             task 'test-be',  -> 
               run-local @remote, './scripts/be-test', { sub-dir: 'infoweb', +silent }
@@ -226,7 +226,7 @@ ns = build-tasks [
 
             task 'test-fe',  -> 
               run-local @remote, './scripts/fe-test', { sub-dir: 'infoweb', +silent }
-              .then ~> save it, { to: "w1:data/iwtest-fe.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-fe.json", in: @nodes }
 
             task 'test-all', "Executes tests",   ->
               sequence @, [ 'test-be', 'test-be2', 'test-fe' ]
@@ -272,7 +272,7 @@ ns = build-tasks [
 
             task 'test-e2e-engage', "End to end test",   ->
               run-local @remote, './scripts/e2e-test', { sub-dir: 'infoweb', +silent }
-              .then ~> save it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
               .then ~> run-local @remote, 'killall phantomjs'
 
             task 'test-e2e', "Starts test server, tests e2e and shutsdown test server",   ->

@@ -76,6 +76,12 @@ _module = ->
             res = 
                 | _.is-array(it) => [ value ] ++ it
                 | _ => [ value, it ]
+
+            res = 
+                | options.filterAll? => res 
+                | options.first? => _.first(res, options.first)
+                | _ => _.first(res, 25)
+
             return res
 
         opt = { from: options.to, in: options.in }
