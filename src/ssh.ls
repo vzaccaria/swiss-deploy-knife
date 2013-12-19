@@ -277,6 +277,7 @@ _module = ->
         inner-module: inner-module
         load: load
         save: save
+        append: append
         mirror: mirror
         open-terminal: open-terminal
     }
