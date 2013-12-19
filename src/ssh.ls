@@ -70,45 +70,13 @@ _module = ->
             return require(address.credentials)[url][us]
 
     append = (value, options) ->
+        combine = ->
+            | _.is-array(it) => it ++ [ value ]
+            | _ => [ it value ]
 
-        tmp = setup-temporary-directory()
+        opt = { from: options.to, in: options.in }
 
-        get(local, remote-path, "#tmp/temp.json").then ->
-
-            data = fs.read-file-sync "#tmp/temp.json", 'utf-8'
-            data = JSON.parse(data)
-            if not _.is-array(data)
-                throw "Expecting remote json array"
-            else 
-                data = data ++ [ value ]
-                save data, remote-path
-
-        e = __q.defer()
-        conn = cnn.create-connection()
-        conn = cnn.connect(conn, local)
-        cnn.register-msg-handlers(conn)
-
-        shutdown-ok = -> 
-                conn.end()
-                e.resolve(it)
-
-        shutdown-fail = ->
-                conn.end()
-                e.resolve( [ value ] )      
-
-
-        conn.on 'ready', -> 
-            conn.sftp (err, sftp) ->
-                if err 
-                    shutdown-fail()
-                else 
-                    sftp.fast-put local-path, remote-path, (err) ->
-                        if err 
-                            shutdown-fail()
-                        else 
-                            shutdown-ok()
-
-        return e.promise       
+        return load(opt).then(combine).then -> save it, options
 
 
     open-terminal = (address) ->
