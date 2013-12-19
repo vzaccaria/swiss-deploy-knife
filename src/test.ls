@@ -84,7 +84,7 @@ describe 'ssh command-on-wire connection', (empty)->
     it '`module.connect` should call `conn.connect`', ->
         expected = sinon.mock(conn).expects('connect').once()
         s1 = sinon.stub mod.inner-module(), 'otherGetCredentials', ->
-        mod.connect(conn, { credentials: '/Users/zaccaria/.ssh/id_rsa'} )
+        mod.connect(conn, { credentials: '/Users/zaccaria/.ssh/id_sa'} )
         expected.verify()
         s1.called-once.should.be.equal(true)
 

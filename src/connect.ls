@@ -64,7 +64,7 @@ _module = ->
             host:           local.hostname
             port:           local.port 
             username:       local.username
-            private-key:    require('fs').readFileSync(local.credentials)
+            private-key:    other-get-credentials(local)
         }
         return conn
 
