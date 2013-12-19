@@ -70,6 +70,7 @@ _module = ->
             return require(credentials)[url][user]
 
     append = (value, options) ->
+        value = JSON.parse(value)
         combine = ->
             | _.is-array(it) => it ++ [ value ]
             | _ => [ it, value ]
