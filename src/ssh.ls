@@ -75,7 +75,9 @@ _module = ->
             | _ => [ it, value ]
 
         opt = { from: options.to, in: options.in }
-        logt = -> console.log JSON.stringify(it, null, 4)
+        logt = -> 
+            console.log JSON.stringify(it, null, 4)
+            return it
 
         p = load(opt).then(logt).then(combine).then(logt).then(-> save(it, options))
         p.fail(-> save(value, options))
