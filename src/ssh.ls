@@ -203,7 +203,10 @@ _module = ->
                     cc.on 'close', ->
                         dta = shelljs.cat("#dd/temp.json")
                         remove-temporary-directory(dd)
-                        data = JSON.parse(dta)
+                        try
+                            data = JSON.parse(dta)
+                        catch error
+                            d.reject(error)
                         d.resolve(data)
 
             else 
