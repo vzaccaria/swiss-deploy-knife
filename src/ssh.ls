@@ -72,11 +72,11 @@ _module = ->
     append = (value, options) ->
         combine = ->
             | _.is-array(it) => it ++ [ value ]
-            | _ => [ it value ]
+            | _ => [ it, value ]
 
         opt = { from: options.to, in: options.in }
 
-        return load(opt).then(combine).then -> save it, options
+        return load(opt).then(combine).then(-> save it, options)
 
 
     open-terminal = (address) ->
