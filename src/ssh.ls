@@ -67,7 +67,7 @@ _module = ->
         shelljs.rm '-rf', dir 
 
     @get-credentials = (credentials, url, user ) ->
-            return require(address.credentials)[url][us]
+            return require(credentials)[url][us]
 
     append = (value, options) ->
         combine = ->
