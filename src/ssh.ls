@@ -73,7 +73,6 @@ _module = ->
         value = JSON.parse(value)
 
         combine = ->
-            let v = value 
                 | _.is-array(it) => it ++ [  v ]
                 | _ => [ it, v ]
 
@@ -82,7 +81,7 @@ _module = ->
             console.log JSON.stringify(it, null, 4)
             return it
 
-        p = load(opt).then(logt).then(combine).then(logt).then(-> save(it, options))
+        p = load(opt).then(logt).then(combine).then(logt).then(->save(it, options))
         p.fail(-> save(value, options))
 
 
