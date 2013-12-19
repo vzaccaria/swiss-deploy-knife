@@ -71,6 +71,7 @@ describe 'ssh command-on-wire connection', (empty)->
     var mod 
     var conn
     var mock-conn
+    var target-module
 
     it 'should instantiate connection module module', ->
         mod := require('./connect')
@@ -82,8 +83,10 @@ describe 'ssh command-on-wire connection', (empty)->
 
     it '`module.connect` should call `conn.connect`', ->
         expected = sinon.mock(conn).expects('connect').once()
-        mod.connect(conn, { credentials: '/Users/zaccaria/.ssh/id_rsa'})
+        s1 = sinon.stub mod.inner-module(), 'otherGetCredentials', ->
+        mod.connect(conn, { credentials: '/Users/zaccaria/.ssh/id_rsa'} )
         expected.verify()
+        s1.called-once.should.be.equal(true)
 
     it '`module.send-command` should call `conn.exec` and get a succesful promise', (done) ->
         fake-stream = new (require('events').EventEmitter)()
@@ -685,7 +688,7 @@ describe 'ssh commands', (empty)->
         fake-proc.emit 'error'
         promise `notifies-on-fail` done
 
-    it '`should invoke save correctly..', (done) ->
+    it '`module` should invoke save correctly..', (done) ->
         fake-proc:= new (require('events').EventEmitter)()
         sinon.stub target-module.inner-module().fs, 'writeFile', (what, how, after) ->
             after()
