@@ -24,3 +24,6 @@ src/sk.js
 src/task.js
 
 src/test.js
+lib
+bin
+examples/config.js

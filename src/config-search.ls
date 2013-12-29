@@ -33,13 +33,12 @@ _module = ->
 
       does-exist = (f) ->
         x = shelljs.test('-e', path.resolve(f))
-        console.log path.resolve(f),x
         return x
 
       res = 
-        | does-exist './.config.js' => path.resolve('./.config.js')
-        | does-exist process.env.HOME + '/.sk-files/config.js' => process.env.HOME + '/.sk-files/config.js'
         | does-exist './.sk-files/config.js' => path.resolve('./.sk-files/config.js')
+        | does-exist './config.js' => path.resolve('./config.js')
+        | does-exist process.env.HOME + '/.sk-files/config.js' => process.env.HOME + '/.sk-files/config.js'
         | _ => null
 
       return res

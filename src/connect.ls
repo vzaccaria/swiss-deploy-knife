@@ -26,6 +26,9 @@ _module = ->
 
     var scope 
 
+    @other-get-credentials = (local) ->
+            return require('fs').readFileSync(local.credentials)
+
     send-command = (conn, c, options) ->
       d = __q.defer()
       disp "Executing command #c"
@@ -61,7 +64,7 @@ _module = ->
             host:           local.hostname
             port:           local.port 
             username:       local.username
-            private-key:    require('fs').readFileSync(local.credentials)
+            private-key:    other-get-credentials(local)
         }
         return conn
 
@@ -79,8 +82,11 @@ _module = ->
     inject = (o) ->
       _.extend(this, o)
 
+    inner-module = ->
+      return root
 
     iface = { 
+                inner-module: inner-module
                 send-command: send-command 
                 create-connection: create-connection
                 connect: connect 
