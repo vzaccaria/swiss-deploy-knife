@@ -3,6 +3,8 @@
 { get, put, open-terminal, save, mirror, append }                                                = require('swiss-deploy-knife/lib/ssh')
 { create-lezione, create-esercitazione, create-comunicazione }                                   = require('swiss-deploy-knife/lib/jekyll')
 
+shelljs = require('shelljs')
+
 save-remotely = save
 
 copy = (x) ->
@@ -94,6 +96,22 @@ nodes =
             run-as-sudo : false
             directory   : '~'
 
+    bonzo:
+        description: "Mini farm"
+
+        path: 
+
+          username    : "zaccaria"
+          hostname    : "192.168.0.103"
+          port        : "22"
+          credentials : ssh-cred
+          hosttype    : 'linux'
+          access      : \ssh
+          login:
+            shell       : mzsh
+            run-as-sudo : false
+            directory   : '~'
+
     default: 's3'
 
 
@@ -121,6 +139,9 @@ ns = build-tasks [
             task 'ssh', 'launches an ssh term on the remote node', ->
               open-terminal @remote 
 
+            task 'env', 'prints current env, as seen by sk', ->
+              console.log process.env
+
 ## Remember to upload:
 #
 # #!/bin/sh
@@ -131,6 +152,13 @@ ns = build-tasks [
         namespace 'mac', 'applicable to this mac', { default-node: 's3'}, 
             task 'vagrant-check', 'inspects a running instance of vagrant (local)', ->
               run @remote, [ "bash -l -c 'cd ~/docker/docker && vagrant status | grep default'" ]
+
+        namespace 'local', 'these commands run only on local machine', { default-node: 's3root' },
+            task 'install-semantic-angle', 'downloads SA from github and installs it in the local directory', ->
+               shelljs.exec 'wget https://github.com/vzaccaria/semantic-angle/archive/master.zip'
+               shelljs.exec 'mv master master.zip'
+               shelljs.exec 'unzip *.zip'
+
 
         namespace 'hbomb', 'applicable to hbomb', { default-node: 's1' },
 

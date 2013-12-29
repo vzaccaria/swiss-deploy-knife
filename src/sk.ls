@@ -125,6 +125,15 @@ if argv.aliases? and argv.aliases
 if argv.list? and argv.list or argv.help? and argv.help
   print-env(nodes, namespace)
 
+  hn = require('os').hostname()
+  us = process.env.LOGNAME
+
+  pdisp ""
+  pdisp "To enable sk access to a remote machine, enable key auth:"
+  pdisp " "
+  pdisp " remote-prompt> ssh #us@#hn 'cat .ssh/id_rsa.pub' >> ~/.ssh/authorized_keys"
+  pdisp ""
+
 if not nodes.default? or not nodes[nodes.default]? 
   disp-ko "You should specify a default node"
   process.exit(0)
