@@ -262,7 +262,7 @@ ns = build-tasks [
               sequence @, [ 'src-checkout', 'src-link-packages', 'src-compile' ]
 
 
-            task 'src-default-fast', { +show }, "When source is already deployed, same as above but use only update from svn", ->
+            task 'src-default-fast', "When source is already deployed, same as above but use only update from svn", ->
               sequence @, [ 'src-update', 'src-link-packages', 'src-compile' ]
 
             # ----
@@ -280,12 +280,12 @@ ns = build-tasks [
               .then ~> append it, { to: "w1:data/iwtest-fe.json", in: @nodes }
 
             task 'test-default', { +show }, "Executes tests on current environment",   ->
-              sequence @, [ 'test-be', 'test-be2', 'test-fe' ]
+              sequence @, [ 'test-be', 'test-be2', 'test-fe', 'test-e2e-default' ]
 
 
             # ---
 
-            task 'stage-and-test-default', "Wipes everything, builds and tests (complete regression test)", ->
+            task 'stage-and-test-default', {+show}, "(Nightly) Wipes everything, builds and tests (complete regression test)", ->
               sequence @, [
                             'buildenv-default'
                             'src-default'
@@ -306,7 +306,7 @@ ns = build-tasks [
               .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
               .then ~> run-local @remote, 'killall phantomjs'
 
-            task 'test-e2e-default', {+show}, "Starts test server, tests e2e and shutsdown test server",   ->
+            task 'test-e2e-default', "Starts test server, tests e2e and shutsdown test server",   ->
               sequence @, ['test-e2e-start', 'test-e2e-engage', 'test-e2e-stop']
 
 
