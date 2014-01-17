@@ -232,7 +232,6 @@ _module = ->
 
         return d.promise
 
-
     save = (what, options) ->
         d = __q.defer()
 

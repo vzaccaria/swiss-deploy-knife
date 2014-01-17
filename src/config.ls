@@ -2,6 +2,7 @@
 { print-as-table }                                                                               = require('swiss-deploy-knife/lib/print')
 { get, put, open-terminal, save, mirror, append }                                                = require('swiss-deploy-knife/lib/ssh')
 { create-lezione, create-esercitazione, create-comunicazione }                                   = require('swiss-deploy-knife/lib/jekyll')
+{ fail } = require('swiss-deploy-knife/lib/actions')
 
 shelljs = require('shelljs')
 
@@ -150,7 +151,7 @@ ns = build-tasks [
 # as ngrok.sh
 
         namespace 'mac', 'applicable to this mac', { default-node: 's3'}, 
-            task 'vagrant-check', 'inspects a running instance of vagrant (local)', ->
+            task 'vagrant-check', {+show}, 'inspects a running instance of vagrant (local)', ->
               run @remote, [ "bash -l -c 'cd ~/docker/docker && vagrant status | grep default'" ]
 
         namespace 'local', 'these commands run only on local machine', { default-node: 's3root' },
@@ -171,12 +172,12 @@ ns = build-tasks [
             task 'prepare-ngrok', 'Installs ngrok into target machine', ->
               run-local @remote, [
                                     "mkdir -p #local-bin-dir"
-                                    "rm ngrok.zip"
-                                    "rm ngrok"
+                                    "rm -f ngrok.zip"
+                                    "rm -f ngrok"
                                     "wget https://dl.ngrok.com/linux_386/ngrok.zip"
                                     "wget http://www.vittoriozaccaria.net/deposit/ngrok.sh"
                                     "unzip ngrok.zip"
-                                    "rm ngrok.zip"
+                                    "rm -f ngrok.zip"
                                     "mv ngrok #local-bin-dir"
                                     "mv ngrok.sh #local-bin-dir"
                                     ]
@@ -215,6 +216,18 @@ ns = build-tasks [
 
         namespace 'infoweb', 'tasks associated with testing the infoweb project', {default-node: 's2'},
 
+            task 'buildenv-showprereq', {+show}, "Installs curl and shows installation prerequisites after a clean vagrant installation", ->
+              run-local @remote, "apt-get install curl", { +run-as-sudo }
+              .then ~> 
+
+                s = """
+                    *** 
+                    Remember to setup svn: sudo vi ~/.subversion/servers -> store-passwords and store-plaintext-passwords = yes
+                    Remember to setup grok with task linux:prepare-ngrok
+                    """
+
+                console.log s
+
             task 'buildenv-create', "Creates the environment for infoweb, using default-node data", ->
               create-local @remote 
 
@@ -222,8 +235,11 @@ ns = build-tasks [
               remove-local @remote
 
             task 'buildenv-prepare', "Installs globally grunt, sails, n and node 0.10.13", ->
-              run-local @remote, "npm install -g grunt-cli sails n mocha forever", { +run-as-sudo }
+              run-local @remote, "npm install -g grunt-cli sails n mocha forever LiveScript", { +run-as-sudo }
               .then ~> run-local @remote, "n 0.10.13"
+
+            task 'buildenv-default', {+show}, "Cleans up everything and prepares for a new installation. Launch after buildenv-showprereq ", ->
+              sequence @, [ 'buildenv-remove', 'buildenv-create', 'buildenv-prepare' ]
 
             # ----
 
@@ -236,11 +252,18 @@ ns = build-tasks [
             task 'src-link-packages', "Executes `npm install` in ~/test/infoweb", ->
 
               run-local @remote          , 'npm install'                          , { sub-dir: 'infoweb'}
-              .then ~> run-local @remote , 'npm install shelljs ansi-color-table' , { sub-dir: 'infoweb' }
+              .then ~> run-local @remote , 'npm install ansi-color optimist shelljs ansi-color-table express' , { sub-dir: 'infoweb' }
               .then ~> run-local @remote , 'npm install'                          , { sub-dir: 'infoweb/node_modules/sails' }
 
             task 'src-compile',   "Executes `grunt deploy` in ~/test/infoweb",   ->
               run-local @remote, 'grunt deploy', { sub-dir: 'infoweb'}
+
+            task 'src-default', { +show }, "After buildenv-default, deploy from svn and finalize source code with this command", ->
+              sequence @, [ 'src-checkout', 'src-link-packages', 'src-compile' ]
+
+
+            task 'src-default-fast', { +show }, "When source is already deployed, same as above but use only update from svn", ->
+              sequence @, [ 'src-update', 'src-link-packages', 'src-compile' ]
 
             # ----
 
@@ -256,39 +279,19 @@ ns = build-tasks [
               run-local @remote, './scripts/fe-test', { sub-dir: 'infoweb', +silent }
               .then ~> append it, { to: "w1:data/iwtest-fe.json", in: @nodes }
 
-            task 'test-all', "Executes tests",   ->
+            task 'test-default', { +show }, "Executes tests on current environment",   ->
               sequence @, [ 'test-be', 'test-be2', 'test-fe' ]
 
 
             # ---
 
-            task 'test-fast-stage', "Updates and compiles", ->
+            task 'stage-and-test-default', "Wipes everything, builds and tests (complete regression test)", ->
               sequence @, [
-                            'src-update'
-                            'src-link-packages'
-                            'src-compile'                           
+                            'buildenv-default'
+                            'src-default'
+                            'test-default'                           
                             ]
 
-            task 'test-after-fast-staging', "Updates remote repo, runs `deploy` and `test`", ->
-              sequence @, [ 
-                            'test-fast-stage'
-                            'test-all'
-                            ]
-
-            task 'test-complete-stage', "Checks out and compiles", ->
-                          [
-                            'buildenv-remove', 
-                            'buildenv-create', 
-                            'src-checkout', 
-                            'src-link-packages', 
-                            'src-compile'               
-                            ]
-
-            task 'test-after-complete-staging', "Cleans up everything and reinstall to test", ->
-              sequence @, [ 
-                            'test-fast-stage'
-                            'test-all'
-                            ]
 
             # ----
 
@@ -303,7 +306,7 @@ ns = build-tasks [
               .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
               .then ~> run-local @remote, 'killall phantomjs'
 
-            task 'test-e2e', "Starts test server, tests e2e and shutsdown test server",   ->
+            task 'test-e2e-default', {+show}, "Starts test server, tests e2e and shutsdown test server",   ->
               sequence @, ['test-e2e-start', 'test-e2e-engage', 'test-e2e-stop']
 
 
@@ -333,6 +336,46 @@ ns = build-tasks [
 
             task 'ssh', 'Launches an ssh term on the remote node', ->
               open-terminal @remote 
+
+            ...
+
+
+        namespace 'render', 'general commands to render to blender' {default-node: 's2'}, 
+
+            task 'put', 'Copies files to hbomb', ->
+              code = (shelljs.exec "scp #{@args.command} zaccaria@hbomb.elet.polimi.it:/data2/zaccaria/vagrant/tmp.blend").code
+              if code == 0
+                run @remote, "cp '/vagrant/vagrant/tmp.blend' ~/blender-test/blend"
+              else 
+                console.log "Sorry, cannot find file."
+                fail()
+
+            task 'render', ->
+              run @remote, "cd ~/blender-test && blender -noaudio -b ./blend/tmp.blend -o //file -F JPEG -x 1 -f 1"
+
+            task 'get', 'Gets files from hbomb', ->
+              run @remote, "cp '/home/vagrant/blender-test/blend/file0001.jpg' /vagrant/vagrant/result.jpg"
+              .then -> shelljs.exec "scp zaccaria@hbomb.elet.polimi.it:/data2/zaccaria/vagrant/result.jpg ."
+
+            task 'complete', ->
+              sequence @, [ 'put', 'render', 'get' ]
+
+        namespace 'bz-render', 'general commands to render to blender' {default-node: 'bonzo'}, 
+
+            task 'put', 'Copies files to bonzo', ->
+              code = (shelljs.exec "scp #{@args.command} zaccaria@192.168.0.103:/home/zaccaria/blender-tests/blend/tmp.blend").code
+              if code != 0
+                console.log "Sorry, cannot find file."
+                fail()
+
+            task 'render', ->
+              run @remote, "cd ~/blender-tests && blender -noaudio -b ./blend/tmp.blend -o //file -F JPEG -x 1 -f 1"
+
+            task 'get', 'Gets files from bonzo', ->
+              shelljs.exec "scp  zaccaria@192.168.0.103:/home/zaccaria/blender-tests/blend/file0001.jpg ./result.jpg"
+
+            task 'complete', ->
+              sequence @, [ 'put', 'render', 'get' ]              
 
             ...
         ]

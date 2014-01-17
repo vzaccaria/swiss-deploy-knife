@@ -63,7 +63,9 @@ argv     = optimist.usage(usage-string,
               logfile: 
                 alias: 'g', description: 'Specify a log file'
               list:
-                alias: 'l', description: 'List available tasks'
+                alias: 'l', description: 'List important tasks'
+              all:
+                alias: 'a', description: 'List all available tasks'
               default:
                 alias: 'd', description: 'Use default node'
               command:
@@ -96,7 +98,6 @@ if not argv.file?
 
 psetup(argv.logfile)
 
-disp("Using file: #{argv.file}")
 
 ff = require("path").resolve(cwd, argv.file)
 # disp "Using configuration file: #ff"
@@ -122,8 +123,10 @@ if argv.aliases? and argv.aliases
 
       process.exit(0)
 
+disp("Using file: #{argv.file}")
+
 if argv.list? and argv.list or argv.help? and argv.help
-  print-env(nodes, namespace)
+  print-env(nodes, namespace, argv)
 
   hn = require('os').hostname()
   us = process.env.LOGNAME

@@ -43,6 +43,10 @@ _module = ->
             t   := tns 
             tns := default-ns
        return [tns, t]    
+
+    fail = ->
+      d = __q.defer()
+      return d.promise.then-reject("Command failed")
           
 
     @direct-call = (p, tns, t, target-node, argv, namespace, nodes) ->
@@ -152,6 +156,7 @@ _module = ->
 
     iface = {
         print:  print
+        fail: fail
         invoke-actions : invoke-actions
         inner-module   : inner-module 
         direct-call    : @direct-call

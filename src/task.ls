@@ -101,9 +101,18 @@ _module = ->
         fun = undefined 
 
         n = 1
+
+        show = false
+
+        if a[n]?.show? 
+            show := a[n].show
+            n = n + 1
+
+
         if _.is-string(a[n]) 
             description = a[n]
             n = n + 1
+
 
         if _.is-function(a[n])
             fun =  a[n] 
@@ -114,6 +123,7 @@ _module = ->
             name: name 
             description: description
             fun: fun 
+            show: show
         }
 
         return ts
