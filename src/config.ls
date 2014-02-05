@@ -302,7 +302,7 @@ ns = build-tasks [
               run-local @remote, 'NODE_TEST=true forever stop app.js', { sub-dir: 'infoweb/infoweb'}
 
             task 'test-e2e-engage', "End to end test",   ->
-              run-local @remote, './scripts/e2e-test', { sub-dir: 'infoweb', +silent }
+              run-local-safe @remote, './scripts/e2e-test', { sub-dir: 'infoweb', +silent }
               .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
               .then ~> run-local @remote, 'killall phantomjs'
 
