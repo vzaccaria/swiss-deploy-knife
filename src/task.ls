@@ -163,6 +163,15 @@ _module = ->
 
             return run(remote-node, cm)
 
+
+    run-local-safe = (remote-node, comms, options) ->
+        p = run-local(remote-node, comms, options)
+        success = ->
+            return 'ok'
+        fail = ->
+            return 'ko, but continuing'
+        return p.then(success, fail)
+
     run-local = (remote-node, comms, options) ->
         var cm
         var cd
@@ -247,6 +256,7 @@ _module = ->
         bsh                  : bsh
         run                  : run
         run-local            : run-local
+        run-local-safe       : run-local-safe
         task                 : task
         get-interested-nodes : get-interested-nodes
         create-local         : create-local
