@@ -70,7 +70,13 @@ _module = ->
             return require(credentials)[url][user]
 
     append = (value, options) ->
-        value = JSON.parse(value)
+
+        try 
+            value = JSON.parse(value)
+        catch err 
+            pdeb "Error parsing"
+            pdeb value
+
 
         combine = ->
             res = 
