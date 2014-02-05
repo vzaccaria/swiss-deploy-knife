@@ -1,4 +1,4 @@
-{ namespace, task, build-tasks, run, run-local, create-local, remove-local, zsh, bsh, sequence } = require('swiss-deploy-knife/lib/task')
+{ namespace, task, build-tasks, run, run-local, run-local-safe, create-local, remove-local, zsh, bsh, sequence } = require('swiss-deploy-knife/lib/task')
 { print-as-table }                                                                               = require('swiss-deploy-knife/lib/print')
 { get, put, open-terminal, save, mirror, append }                                                = require('swiss-deploy-knife/lib/ssh')
 { create-lezione, create-esercitazione, create-comunicazione }                                   = require('swiss-deploy-knife/lib/jekyll')
