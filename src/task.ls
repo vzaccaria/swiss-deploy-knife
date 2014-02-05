@@ -227,7 +227,10 @@ _module = ->
 
         shutdown-fail = ->
                 conn.end()
-                e.reject(it)      
+                if it?
+                    e.reject(it)      
+                else 
+                    e.reject()
 
         conn.on 'ready', -> 
            pdeb "Ready to send command #command"
