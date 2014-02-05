@@ -70,7 +70,7 @@ _module = ->
             return require(credentials)[url][user]
 
     append = (value, options) ->
-
+        pdeb "Trying to append #value"
         try 
             value = JSON.parse(value)
         catch err 
