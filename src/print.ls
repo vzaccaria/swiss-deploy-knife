@@ -58,13 +58,14 @@ _module = ->
     format-task-name = (ns, s) ->
       _.pad("#ns:", 10) + _.rpad(s, (tab-20+2))
 
-    print-env = (nodes, namespace) ->
+    print-env = (nodes, namespace, argv) ->
       pdisp "Namespace and tasklist:"
       pdisp ""
       for nns, vns of namespace
           pdisp format-task-namespace(nns), " — #{vns.description}"
           for k,v of vns.tasks 
-             pdisp format-task-name(nns, k), " — #{v.description}"
+             if (argv.all? and argv.all) or (v.show)
+                pdisp format-task-name(nns, k), " — #{v.description}"
           pdisp ""
 
       pdisp "Nodes:"    

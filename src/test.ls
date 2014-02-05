@@ -46,6 +46,15 @@ psetup = (file) ->
         winston.add(winston.transports.Console, { level: 'error', +colorize })
         # winston.add(winston.transports.Console, { +colorize })
 
+patch-dependency = (module, depname, property, value) -->
+    sinon.stub(module.inner-module()[depname], property, value)
+
+unpatch-dependency = (module, depname, property) -->
+    if not (_.is-array property)
+        module.inner-module()[depname][property].restore()
+    else 
+        for e in property 
+            module.inner-module()[depname][e].restore()
 
 # dbg = false
 
@@ -478,18 +487,41 @@ describe 'tasks and namespace', (empty)->
 
     describe 'run', (empty)->
         var fake-conn
-        it 'should return a resolved promise', (done) ->
-            fake-conn := new (require('events').EventEmitter)()
-            sinon.stub tsk.inner-module().connect, 'createConnection', -> {}
-            sinon.stub tsk.inner-module().connect, 'connect', -> fake-conn
-            spy := sinon.stub tsk.inner-module().connect, 'sendCommand', ->
-                    return create-resolved-promise()
+        var patch-connect 
 
-            fake-conn.end = sinon.stub().returns(true)
+        patch-connect = patch-dependency(tsk, 'connect')
+        unpatch-connect = unpatch-dependency(tsk, 'connect')
+
+        new-connection = ->
+            fc = new (require('events').EventEmitter)()
+            fc.end = sinon.stub().returns(true)
+            fc.ok  = -> fc.emit 'ready'
+            return fc
+
+        it 'should return a rejected promise if command fails', (done) ->
+
+            fake-conn := new-connection()
+            patch-connect 'createConnection',   -> {}
+            patch-connect 'connect',            -> fake-conn
+            spy := patch-connect 'sendCommand', -> create-rejected-promise()
 
             p := tsk.run({}, 'a', {})
-            fake-conn.emit 'ready'
+            fake-conn.ok() 
+            p `notifies-on-fail` done
+
+        it 'should return a resolved promise', (done) ->
+            unpatch-connect ['createConnection', 'connect', 'sendCommand']
+
+            fake-conn := new-connection()
+            patch-connect 'createConnection',   -> {}
+            patch-connect 'connect',            -> fake-conn
+            spy := patch-connect 'sendCommand', -> create-resolved-promise()
+
+            p := tsk.run({}, 'a', {})
+            fake-conn.ok() 
             p `notifies-on-success` done
+
+
 
         it 'should send the correct command', ->
             spy.calledOnce.should.be.equal(true)
@@ -564,6 +596,17 @@ describe 'tasks and namespace', (empty)->
         it 'run-local should have invoked run underneath', ->
             spy.lastCall.args[1].should.be.equal('cd ~/test/infoweb && sudo abc')
 
+        it 'run-local safe should return a successful promise if command fails', (done) ->
+            unpatch-connect ['createConnection', 'connect', 'sendCommand']
+
+            fake-conn := new-connection()
+            patch-connect 'createConnection',   -> {}
+            patch-connect 'connect',            -> fake-conn
+            spy := patch-connect 'sendCommand', -> create-rejected-promise()
+
+            p := tsk.run-local-safe({}, 'a', {})
+            fake-conn.ok() 
+            p `notifies-on-success` done
 
     describe 'sequence', (empty)->       
         var namespace 

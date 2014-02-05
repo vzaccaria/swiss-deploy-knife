@@ -101,9 +101,18 @@ _module = ->
         fun = undefined 
 
         n = 1
+
+        show = false
+
+        if a[n]?.show? 
+            show := a[n].show
+            n = n + 1
+
+
         if _.is-string(a[n]) 
             description = a[n]
             n = n + 1
+
 
         if _.is-function(a[n])
             fun =  a[n] 
@@ -114,6 +123,7 @@ _module = ->
             name: name 
             description: description
             fun: fun 
+            show: show
         }
 
         return ts
@@ -152,6 +162,15 @@ _module = ->
                 | _ => cm 
 
             return run(remote-node, cm)
+
+
+    run-local-safe = (remote-node, comms, options) ->
+        p = run-local(remote-node, comms, options)
+        success = ->
+            return 'ok'
+        fail = ->
+            return 'ko, but continuing'
+        return p.then(success, fail)
 
     run-local = (remote-node, comms, options) ->
         var cm
@@ -237,6 +256,7 @@ _module = ->
         bsh                  : bsh
         run                  : run
         run-local            : run-local
+        run-local-safe       : run-local-safe
         task                 : task
         get-interested-nodes : get-interested-nodes
         create-local         : create-local
