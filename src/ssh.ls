@@ -93,6 +93,8 @@ _module = ->
                 | options.first? => _.first(res, options.first)
                 | _ => _.first(res, 25)
 
+            res = _.filter(res, ( -> not (_.is-null(it))))
+
             return res
 
         opt = { from: options.to, in: options.in }
