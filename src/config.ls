@@ -269,15 +269,15 @@ ns = build-tasks [
 
             task 'test-be2', -> 
               run-local-safe @remote, './scripts/be2-test', { sub-dir: 'infoweb', +silent }
-              .then ~> append it, { to: "w1:data/iwtest-be2.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-be2.json", in: @nodes, first: 5 }
 
             task 'test-be',  -> 
               run-local-safe @remote, './scripts/be-test', { sub-dir: 'infoweb', +silent }
-              .then ~> append it, { to: "w1:data/iwtest-be.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-be.json", in: @nodes, first: 5 }
 
             task 'test-fe',  -> 
               run-local-safe @remote, './scripts/fe-test', { sub-dir: 'infoweb', +silent }
-              .then ~> append it, { to: "w1:data/iwtest-fe.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-fe.json", in: @nodes, first: 5 }
 
             task 'test-default', { +show }, "Executes tests on current environment",   ->
               sequence @, [ 'test-be', 'test-be2', 'test-fe', 'test-e2e-default' ]
@@ -303,12 +303,11 @@ ns = build-tasks [
 
             task 'test-e2e-engage', "End to end test",   ->
               run-local-safe @remote, './scripts/e2e-test', { sub-dir: 'infoweb', +silent }
-              .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
+              .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes, first: 5 }
               .then ~> run-local @remote, 'killall phantomjs'
 
             task 'test-e2e-human-engage', "End to end test",   ->
               run-local @remote, './scripts/e2e-test-human', { sub-dir: 'infoweb', +silent }
-              .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes }
               .then ~> run-local @remote, 'killall phantomjs'
 
             task 'test-e2e-default', "Starts test server, tests e2e and shutsdown test server",   ->
