@@ -80,6 +80,10 @@ _module = ->
 
         combine = ->
             res = 
+                | not it? => []
+                | _ => it 
+                
+            res = 
                 | not _.is-object(value) => it
                 | _.is-array(it) => [ value ] ++ it
                 | _ => [ value, it ]
