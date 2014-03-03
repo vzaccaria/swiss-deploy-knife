@@ -27,3 +27,4 @@ src/test.js
 lib
 bin
 examples/config.js
+.last-running-container
