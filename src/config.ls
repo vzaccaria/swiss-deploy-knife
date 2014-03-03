@@ -65,7 +65,7 @@ nodes =
           credentials : ssh-cred
           hosttype    : 'linux'
           access      : \ssh
-          shell       : mzsh
+          shell       : czsh
           login: 
             directory   : '~/test'
 
