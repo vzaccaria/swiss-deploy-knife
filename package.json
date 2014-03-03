@@ -1,6 +1,6 @@
 {
   "name": "swiss-deploy-knife",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A tool to easy out deployment and log analysis",
   "main": "index.js",
   "bin": {
