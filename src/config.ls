@@ -17,6 +17,9 @@ copy = (x) ->
 mzsh = (c) ->
         "zsh -l -c 'source .zshrc && #c'"
 
+czsh = (c) ->
+        "zsh -c 'source github/shellinit/common.zshrc && #c'"
+
 
 home     = process.env.HOME
 ssh-cred = "#home/.ssh/id_rsa"
