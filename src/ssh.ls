@@ -28,7 +28,12 @@ otm = if (os.tmpdir?) then os.tmpdir() else "/var/tmp"
 cwd = process.cwd()
 
 
-
+additional-ssh-parameters = [
+                        "-o"
+                        "StrictHostKeyChecking=no"
+                        "-o"
+                        "LogLevel=quiet"
+]
 
 surl-get = (str) ->
     [ node-name, node-path ]    = str / ':'
@@ -70,10 +75,21 @@ _module = ->
             return require(credentials)[url][user]
 
     append = (value, options) ->
-        value = JSON.parse(value)
+        pdeb "Trying to append #value"
+        try 
+            value = JSON.parse(value)
+        catch err 
+            pdeb "Error parsing"
+            pdeb value
+
 
         combine = ->
             res = 
+                | not it? or _.is-null(it) => []
+                | _ => it 
+
+            res = 
+                | not _.is-object(value) => it
                 | _.is-array(it) => [ value ] ++ it
                 | _ => [ value, it ]
 
@@ -81,6 +97,8 @@ _module = ->
                 | options.filterAll? => res 
                 | options.first? => _.first(res, options.first)
                 | _ => _.first(res, 25)
+
+            res = _.filter(res, ( -> not (_.is-null(it))))
 
             return res
 
@@ -106,7 +124,10 @@ _module = ->
                         "#{address.port}"
                         ]
 
-            pdeb "Executing command `ssh` #{args[0]}, #{args[1]}, #{args[2]}"
+            args = args ++ additional-ssh-parameters
+
+            command = [a for a in args] * " "
+            pdeb "Executing command `ssh #{command}`"
 
             ch2 = child_process.spawn 'ssh', args, stdio: 'inherit'
 
@@ -300,6 +321,7 @@ _module = ->
         append: append
         mirror: mirror
         open-terminal: open-terminal
+        additional-ssh-parameters: additional-ssh-parameters
     }
   
     return iface

@@ -167,9 +167,9 @@ _module = ->
     run-local-safe = (remote-node, comms, options) ->
         p = run-local(remote-node, comms, options)
         success = ->
-            return 'ok'
+            return it
         fail = ->
-            return 'ko, but continuing'
+            return it 
         return p.then(success, fail)
 
     run-local = (remote-node, comms, options) ->

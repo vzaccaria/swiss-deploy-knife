@@ -36,7 +36,7 @@ _module = ->
       register-msg-handlers(conn, d)
       conn.exec c, (err, stream) ->
           if err then 
-            d.reject("Exit code: #err")
+            d.reject(output)
             return
 
           stream.on 'data', -> 
@@ -46,7 +46,7 @@ _module = ->
 
           stream.on 'exit', (code, signal) -> 
             if code isnt 0
-              d.reject("Exit code: #code")        
+              d.reject(output)        
             else
               d.resolve(output)
 
