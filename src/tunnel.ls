@@ -11,6 +11,7 @@ shelljs         = sh
 cl              = require('clark')
 ut              = require('utf-8')
 winston         = require('winston')
+{additional-ssh-parameters} = require('./ssh')
 
 disp-ok = -> winston.info "Ok"
 disp-ko = -> 
@@ -40,12 +41,18 @@ _module = ->
             d.reject("Cannot create tunnel")
         else 
             args = [ 
-                        '-NL', 
+                        '-NL' 
                         "#{address.use}:#{address.hostname}:#{address.port}"
                         "#{through.username}@#{through.hostname}" 
-                        ]
 
-            pdeb "Executing command `ssh` #{args[0]}, #{args[1]}, #{args[2]}"
+                        ]
+          
+            if through.port != 22
+              args = args ++ [ "-p", "#{through.port}" ]
+            args = args ++ additional-ssh-parameters
+
+            command = [a for a in args] * " "
+            pdeb "Executing command `ssh #{command}`"
 
             ch := spawn 'ssh', args
 

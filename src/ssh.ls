@@ -28,7 +28,12 @@ otm = if (os.tmpdir?) then os.tmpdir() else "/var/tmp"
 cwd = process.cwd()
 
 
-
+additional-ssh-parameters = [
+                        "-o"
+                        "StrictHostKeyChecking=no"
+                        "-o"
+                        "LogLevel=quiet"
+]
 
 surl-get = (str) ->
     [ node-name, node-path ]    = str / ':'
@@ -119,7 +124,10 @@ _module = ->
                         "#{address.port}"
                         ]
 
-            pdeb "Executing command `ssh` #{args[0]}, #{args[1]}, #{args[2]}"
+            args = args ++ additional-ssh-parameters
+
+            command = [a for a in args] * " "
+            pdeb "Executing command `ssh #{command}`"
 
             ch2 = child_process.spawn 'ssh', args, stdio: 'inherit'
 
@@ -313,6 +321,7 @@ _module = ->
         append: append
         mirror: mirror
         open-terminal: open-terminal
+        additional-ssh-parameters: additional-ssh-parameters
     }
   
     return iface

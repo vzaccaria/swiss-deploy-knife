@@ -21,6 +21,23 @@ mzsh = (c) ->
 home     = process.env.HOME
 ssh-cred = "#home/.ssh/id_rsa"
 
+
+
+setup-ubuntu-docker = '''
+# DOCKER-VERSION 0.8.0
+#
+# Dockerfile created for staging and deploy infoweb-app
+
+
+FROM cmfatih/nodejs
+
+EXPOSE 80
+EXPOSE 22
+
+RUN npm install -g n
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install wget curl
+'''
+
 nodes = 
     w1:
         description: "Website at www.vittoriozaccaria.net"
@@ -41,22 +58,23 @@ nodes =
 
           username    : "zaccaria"
           hostname    : "hbomb.elet.polimi.it"
-          port        : "22"
+          port        : 22
           credentials : ssh-cred
           hosttype    : 'linux'
           access      : \ssh
-          shell       : bsh
-          directory   : '~'
+          shell       : mzsh
+          login: 
+            directory   : '~/test'
 
     s2: 
-        description: "Vagrant box"
+        description: "Boot2docker box"
 
         path: 
           from        : \s1
           use         : 4444
-          username    : "vagrant"
-          hostname    : "127.0.0.1"
-          port        : "2222"
+          username    : "docker"
+          hostname    : "localhost"
+          port        : 2022
           credentials : ssh-cred
           hosttype    : 'linux'
           access      : \ssh
@@ -64,6 +82,37 @@ nodes =
             shell       : bsh
             run-as-sudo : true
             directory   : '~/test/infoweb'
+
+    # d1: 
+    #     description: "Boot2docker on Mac"
+
+    #     path: 
+    #       from        : \s1
+    #       use         : 2022
+    #       username    : "docker"
+    #       hostname    : "localhost"
+    #       port        : "2022"
+    #       credentials : ssh-cred
+    #       hosttype    : 'linux'
+    #       access      : \ssh
+    #       shell       : bsh
+    #       directory   : '~'
+
+    # d2: 
+    #     description: "Container 1 on Boot2docker"
+
+    #     path:
+    #       from        : \d1
+    #       use         : 4444
+    #       username    : "root"
+    #       hostname    : "0.0.0.0"
+    #       port        : "41150"
+    #       credentials : ssh-cred
+    #       hosttype    : 'linux'
+    #       access      : \ssh
+    #       login:
+    #         shell       : bsh
+    #         directory   : '~/test'          
 
     s3:
         description: "Macbook"
@@ -214,7 +263,14 @@ ns = build-tasks [
             ...
 
 
-        namespace 'infoweb', 'tasks associated with testing the infoweb project', {default-node: 's2'},
+        namespace 'infoweb', 'tasks associated with testing the infoweb project', {default-node: 's1'},
+
+            task 'buildenv-manual', {+show}, "Shows manual steps to define a build environment", ->   
+              s = """
+              sudo DEBIAN_FRONTEND=noninteractive apt-get -y install curl
+              sudo npm install -g grunt-cli sails n mocha forever LiveScript
+              """
+              console.log s
 
             task 'buildenv-showprereq', {+show}, "Installs curl and shows installation prerequisites after a clean vagrant installation", ->
               run-local @remote, "apt-get install curl", { +run-as-sudo }
@@ -222,8 +278,23 @@ ns = build-tasks [
 
                 s = """
                     *** 
-                    Remember to setup svn: sudo vi ~/.subversion/servers -> store-passwords and store-plaintext-passwords = yes
-                    Remember to setup grok with task linux:prepare-ngrok
+                    Setup svn: sudo vi ~/.subversion/servers -> store-passwords and store-plaintext-passwords = yes
+                    Setup grok with task linux:prepare-ngrok
+
+                    If the target machine is a docker host, copy and paste this into a Dockerfile:
+
+                    # DOCKER-VERSION 0.8.0
+                    #
+                    # Dockerfile created for staging and deploy infoweb-app
+
+
+                    FROM cmfatih/nodejs
+
+                    EXPOSE 80
+                    EXPOSE 22
+
+                    RUN npm install -g n
+                    RUN DEBIAN_FRONTEND=noninteractive apt-get -y install wget
                     """
 
                 console.log s
@@ -239,9 +310,8 @@ ns = build-tasks [
               .then ~> run-local @remote, "n 0.10.13"
 
             task 'buildenv-default', {+show}, "Cleans up everything and prepares for a new installation. Launch after buildenv-showprereq ", ->
-              sequence @, [ 'buildenv-remove', 'buildenv-create', 'buildenv-prepare' ]
+              sequence @, [ 'buildenv-remove', 'buildenv-create' ]
 
-            # ----
 
             task 'src-checkout', "Checks out repository in ~/test/infoweb", ->
               run-local @remote, 'svn co -q https://zaccaria@svn.ws.dei.polimi.it/multicube/trunk/devel/zaccaria/infoweb'
