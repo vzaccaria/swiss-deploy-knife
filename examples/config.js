@@ -327,7 +327,7 @@
           first: 5
         });
       }).then(function(){
-        return runLocal(this$.remote, 'killall -q phantomjs');
+        return runLocalSafe(this$.remote, 'killall -q phantomjs');
       });
     }), task('test-e2e-human-engage', "End to end test", function(){
       var this$ = this;
@@ -335,7 +335,7 @@
         subDir: 'infoweb',
         silent: true
       }).then(function(){
-        return runLocal(this$.remote, 'killall -q phantomjs');
+        return runLocalSafe(this$.remote, 'killall -q phantomjs');
       });
     }), task('test-e2e-default', "Starts test server, tests e2e and shutsdown test server", function(){
       return sequence(this, ['test-e2e-start', 'test-e2e-engage', 'test-e2e-stop']);
