@@ -374,11 +374,11 @@ ns = build-tasks [
             task 'test-e2e-engage', "End to end test",   ->
               run-local-safe @remote, './scripts/e2e-test', { sub-dir: 'infoweb', +silent }
               .then ~> append it, { to: "w1:data/iwtest-e2e.json", in: @nodes, first: 5 }
-              .then ~> run-local @remote, 'killall phantomjs'
+              .then ~> run-local @remote, 'killall -q phantomjs'
 
             task 'test-e2e-human-engage', "End to end test",   ->
               run-local @remote, './scripts/e2e-test-human', { sub-dir: 'infoweb', +silent }
-              .then ~> run-local @remote, 'killall phantomjs'
+              .then ~> run-local @remote, 'killall -q phantomjs'
 
             task 'test-e2e-default', "Starts test server, tests e2e and shutsdown test server",   ->
               sequence @, ['test-e2e-start', 'test-e2e-engage', 'test-e2e-stop']
