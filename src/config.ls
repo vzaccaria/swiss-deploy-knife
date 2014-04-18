@@ -352,6 +352,10 @@ ns = build-tasks [
               run-local-safe @remote, './scripts/fe-test', { sub-dir: 'infoweb', +silent }
               .then ~> append it, { to: "w1:data/iwtest-fe.json", in: @nodes, first: 5 }
 
+            task 'test-jm',  -> 
+              run-local-safe @remote, './scripts/jm-test', { sub-dir: 'infoweb', +silent }
+              .then ~> append it, { to: "w1:data/iwtest-jm.json", in: @nodes, first: 5 }
+
             task 'test-default', { +show }, "Executes tests on current environment",   ->
               sequence @, [ 'test-be', 'test-be2', 'test-fe', 'test-e2e-default' ]
 
